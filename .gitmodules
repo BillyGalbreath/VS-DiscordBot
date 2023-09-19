@@ -1,0 +1,3 @@
+﻿[submodule "Discord.Net"]
+	path = Discord.Net
+	url = https://github.com/discord-net/Discord.Net.git
