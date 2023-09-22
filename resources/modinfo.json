@@ -1,7 +1,7 @@
 {
   "type": "code",
   "name": "DiscordBot",
-  "modid": "discordbot",
+  "modid": "vsdiscordbot",
   "version": "0.0.1",
   "description": "Discord integration for Vintage Story",
   "website": "https://github.com/BillyGalbreath/VS-DiscordBot",

@@ -48,7 +48,7 @@ public class DiscordBotMod : ModSystem {
             prefix: typeof(DiscordBotMod).GetMethod("PreOnCharacterSelection"),
             postfix: typeof(DiscordBotMod).GetMethod("PostOnCharacterSelection"));
 
-        string configFile = $"{Mod.Info.ModID}.json";
+        const string configFile = "discordbot.json";
         Config = Api.LoadModConfig<Config.Config>(configFile) ?? new Config.Config();
         Api.StoreModConfig(Config, configFile);
 
