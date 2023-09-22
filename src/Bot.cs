@@ -1,7 +1,10 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Webhook;
 using Discord.WebSocket;
+using DiscordBot.Util;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
@@ -10,22 +13,50 @@ using Vintagestory.API.Server;
 namespace DiscordBot;
 
 public class Bot {
+    private readonly PluralFormatProvider pfp;
+
     private DiscordSocketClient? client;
 
     private SocketTextChannel? chatChannel;
     private SocketTextChannel? consoleChannel;
 
+    private MessageQueue? consoleQueue;
+
+    private readonly DiscordWebhookClient?[] webhooks = new DiscordWebhookClient?[2];
+    private int curWebhook = 1;
+    private string? lastAuthor;
+
     private DiscordBotMod Mod { get; }
 
     public Bot(DiscordBotMod mod) {
         Mod = mod;
+        pfp = new PluralFormatProvider();
     }
 
     public async Task Connect() {
-        client = new DiscordSocketClient();
-        client.Log += ClientLogToConsole;
+        client = new DiscordSocketClient(new DiscordSocketConfig {
+            GatewayIntents = //GatewayIntents.AutoModerationActionExecution |
+                //GatewayIntents.AutoModerationConfiguration |
+                //GatewayIntents.GuildScheduledEvents |
+                //GatewayIntents.DirectMessageTyping |
+                //GatewayIntents.DirectMessageReactions |
+                //GatewayIntents.DirectMessages |
+                //GatewayIntents.GuildMessageTyping |
+                //GatewayIntents.GuildMessageReactions |
+                GatewayIntents.GuildMessages |
+                //GatewayIntents.GuildVoiceStates |
+                //GatewayIntents.GuildInvites |
+                GatewayIntents.GuildWebhooks |
+                //GatewayIntents.GuildIntegrations |
+                //GatewayIntents.GuildEmojis |
+                //GatewayIntents.GuildBans |
+                GatewayIntents.Guilds |
+                GatewayIntents.MessageContent |
+                //GatewayIntents.GuildPresences |
+                GatewayIntents.GuildMembers
+        });
 
-        await client.LoginAsync(TokenType.Bot, Mod.Config?.Token ?? "");
+        await client.LoginAsync(TokenType.Bot, Mod.Config.Token);
         await client.StartAsync();
 
         var ready = new TaskCompletionSource<bool>();
@@ -33,52 +64,162 @@ public class Bot {
             ready.TrySetResult(false);
             return Task.CompletedTask;
         };
+
         client.Ready += () => {
             ready.SetResult(true);
             return Task.CompletedTask;
         };
+
         if (!await ready.Task) {
             client = null;
             return;
         }
 
-        chatChannel = client.GetChannel(Mod.Config?.ChatChannel ?? 0) as SocketTextChannel;
-        consoleChannel = client.GetChannel(Mod.Config?.ConsoleChannel ?? 0) as SocketTextChannel;
+        client.Log += ClientLogToConsole;
 
-        client.MessageReceived += DiscordMessageReceived;
+        if (Mod.Config.ChatChannel != 0) {
+            chatChannel = client.GetChannel(Mod.Config.ChatChannel) as SocketTextChannel;
+
+            SetupWebhooks();
+
+            client.MessageReceived += DiscordMessageReceived;
+        }
+
+        if (Mod.Config.ConsoleChannel != 0) {
+            consoleChannel = client.GetChannel(Mod.Config.ConsoleChannel) as SocketTextChannel;
+
+            consoleQueue = new MessageQueue();
+
+            Mod.Api?.Event.RegisterGameTickListener(_ => {
+                foreach (string lines in consoleQueue.Process()) {
+                    SendMessageToDiscordConsole(lines);
+                }
+            }, 1000);
+        }
     }
 
-    private Task DiscordMessageReceived(SocketMessage arg) {
-        if (client?.CurrentUser.Id == arg.Author.Id) {
+    private void SetupWebhooks() {
+        foreach (IWebhook webhook in chatChannel?.GetWebhooksAsync().Result ?? Enumerable.Empty<IWebhook>()) {
+            switch (webhook.Name) {
+                case "vs1":
+                    webhooks[0] = new DiscordWebhookClient(webhook);
+                    break;
+                case "vs2":
+                    webhooks[1] = new DiscordWebhookClient(webhook);
+                    break;
+            }
+        }
+
+        webhooks[0] ??= new DiscordWebhookClient((chatChannel as IIntegrationChannel)?.CreateWebhookAsync("vs1").Result);
+        webhooks[1] ??= new DiscordWebhookClient((chatChannel as IIntegrationChannel)?.CreateWebhookAsync("vs2").Result);
+    }
+
+    public void OnShutdown() {
+        string format = Mod.Config.Messages.ServerStopped;
+        if (format.Length > 0) {
+            chatChannel?.SendMessageAsync(text: format, allowedMentions: AllowedMentions.None)!.Wait();
+        }
+
+        client?.StopAsync().Wait();
+        client?.LogoutAsync().Wait();
+    }
+
+    public void OnRunGame() {
+        UpdatePresence();
+
+        string format = Mod.Config.Messages.ServerStarted;
+        if (format.Length > 0) {
+            SendMessageToDiscordChat(text: format);
+        }
+    }
+
+    public void OnPlayerNowPlaying(IServerPlayer player) {
+        UpdatePresence();
+        string format = Mod.Config.Messages.PlayerJoined;
+        if (format.Length > 0) {
+            SendMessageToDiscordChat(0x00FF00, embed: string.Format(format, player.PlayerName, GetClass(player)), thumbnail: GetAvatar(player));
+        }
+    }
+
+    public void OnPlayerDisconnect(IServerPlayer player) {
+        Mod.Api?.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
+        string format = Mod.Config.Messages.PlayerLeft;
+        if (format.Length > 0) {
+            SendMessageToDiscordChat(0xFF0000, embed: string.Format(format, player.PlayerName));
+        }
+    }
+
+    public void OnPlayerDeath(string deathMessage) {
+        string format = Mod.Config.Messages.PlayerDeath;
+        if (format.Length > 0) {
+            SendMessageToDiscordChat(0x121212, embed: string.Format(format, deathMessage));
+        }
+    }
+
+    public void OnPlayerChat(IServerPlayer player, int channelId, ref string message, ref string data, BoolRef consumed) {
+        SendMessageToDiscordChat(text: Regex.Replace(message, @"^((<.*>)?[^<>:]+:(</[^ ]*>)?) (.*)$", "$4"),
+            username: player.PlayerName, avatar: GetAvatar(player));
+    }
+
+    public void OnTemporalStormAnnounce(string message) {
+        string format = Mod.Config.Messages.TemporalStorm;
+        if (format.Length > 0) {
+            SendMessageToDiscordChat(0xFFFF00, embed: string.Format(format, message));
+        }
+    }
+
+    public void OnLoggerEntryAdded(EnumLogType logType, string message, object[] args) {
+        switch (logType) {
+            case EnumLogType.Chat:
+            case EnumLogType.Event:
+            case EnumLogType.StoryEvent:
+            case EnumLogType.Notification:
+            case EnumLogType.Warning:
+            case EnumLogType.Error:
+            case EnumLogType.Fatal:
+                consoleQueue?.Enqueue(string.Format($"[{logType}] {message}", args));
+                break;
+            case EnumLogType.Build:
+            case EnumLogType.VerboseDebug:
+            case EnumLogType.Debug:
+            case EnumLogType.Audit:
+            case EnumLogType.Worldgen:
+            default:
+                break;
+        }
+    }
+
+    private Task DiscordMessageReceived(SocketMessage message) {
+        if (client?.CurrentUser.Id == message.Author.Id || message.Author.IsBot || message.Author.IsWebhook || message.Content == "") {
             return Task.CompletedTask;
         }
 
-        ulong channelId = arg.Channel.Id;
-        if (chatChannel?.Id == channelId) {
-            Mod.Api?.SendMessageToGroup(GlobalConstants.GeneralChatGroup, $"[{arg.Author.Username}]: {arg.Content}", EnumChatType.Notification);
+        if (chatChannel?.Id == message.Channel.Id) {
+            string format = Mod.Config.Messages.PlayerChat;
+            if (format.Length <= 0) {
+                return Task.CompletedTask;
+            }
+
+            string author = message.Author is SocketGuildUser guildUser ? guildUser.DisplayName : message.Author.GlobalName ?? message.Author.Username;
+            SendMessageToGameChat(string.Format(format, author, StringUtil.SanitizeMessage(client, message)));
         }
-        else if (consoleChannel?.Id == channelId) {
-            // todo - perform command in console
-            //Mod.Api?.SendMessageToGroup(GlobalConstants.GeneralChatGroup, $"[{arg.Author.Username}]: {arg.Content}", EnumChatType.Notification);
+        else if (consoleChannel?.Id == message.Channel.Id) {
+            // todo - perform command in console    
         }
 
         return Task.CompletedTask;
     }
 
-    public void OnLoggerEntryAdded(EnumLogType logType, string message, object[] args) {
-        consoleChannel?.SendMessageAsync(string.Format(message, args));
-    }
-
     private Task ClientLogToConsole(LogMessage msg) {
         switch (msg.Severity) {
             case LogSeverity.Critical or LogSeverity.Error:
-                Mod.Logger.Error(msg.ToString());
+                Mod.Logger.Error(msg.Message ?? msg.Exception.Message);
                 break;
             case LogSeverity.Warning:
-                Mod.Logger.Warning(msg.ToString());
+                Mod.Logger.Warning(msg.Message ?? msg.Exception.Message);
                 break;
             case LogSeverity.Info:
-                Mod.Logger.Event(msg.ToString());
+                Mod.Logger.Event(msg.Message ?? msg.Exception.Message);
                 break;
             case LogSeverity.Verbose or LogSeverity.Debug:
                 /* do nothing */
@@ -88,63 +229,102 @@ public class Bot {
         return Task.CompletedTask;
     }
 
-    public void OnShutdown() {
-        chatChannel?.SendMessageAsync(Lang.Get("discordbot:server-stopped")).Wait();
-    }
-
-    public void OnRunGame() {
-        UpdatePresence();
-
-        chatChannel?.SendMessageAsync(Lang.Get("discordbot:server-started"));
-    }
-
-    public void OnPlayerDeath(IServerPlayer player, DamageSource? damageSource) {
-        string message = (damageSource?.Source ?? EnumDamageSource.Suicide) switch {
-            EnumDamageSource.Block => "{0} was killed by a block.",
-            EnumDamageSource.Player => "{0} was killed by {1}.",
-            EnumDamageSource.Entity => "{0} was killed by a {1}.",
-            EnumDamageSource.Fall => "{0} fell too far.",
-            EnumDamageSource.Drown => "{0} drowned.",
-            EnumDamageSource.Explosion => "{0} blew up.",
-            EnumDamageSource.Suicide => "{0} couldn't take it anymore.",
-            _ => "{0}'s death is a mystery."
-        };
-
-        string sourceEntity = damageSource?.SourceEntity?.GetName() ?? "null";
-        chatChannel?.SendMessageAsync(string.Format(message, player.PlayerName, sourceEntity));
-    }
-
-    public void OnPlayerNowPlaying(IServerPlayer player) {
-        UpdatePresence();
-        chatChannel?.SendMessageAsync(Lang.Get("discordbot:player-joined", player.PlayerName));
-    }
-
-    public void OnPlayerDisconnect(IServerPlayer player) {
-        UpdatePresence(-1); // todo
-        chatChannel?.SendMessageAsync(Lang.Get("discordbot:player-left", player.PlayerName));
-    }
-
-    private async void UpdatePresence(int adjust = 0) {
-        if (client == null) {
+    public void SendMessageToDiscordChat(uint color = 0x0, string text = "", string embed = "", string? username = null, string? avatar = null, string? thumbnail = null) {
+        if (text.Length <= 0 && embed.Length <= 0) {
             return;
         }
 
-        int count = Mod.Api?.World.AllOnlinePlayers.Length ?? 0 + adjust;
-        await client.SetGameAsync($"with {count} player{(count != 1 ? "s" : "")}");
+        if (lastAuthor != username) {
+            lastAuthor = username;
+            curWebhook = (curWebhook + 1) & 1;
+        }
+
+        DiscordWebhookClient? webhook = webhooks[curWebhook];
+
+        if (webhook != null) {
+            webhook.SendMessageAsync(
+                text: text,
+                embeds: embed.Length <= 0
+                    ? null
+                    : new[] {
+                        new EmbedBuilder()
+                            .WithColor(color)
+                            .WithDescription(embed)
+                            .WithThumbnailUrl(thumbnail)
+                            .Build()
+                    },
+                username: username ?? client?.CurrentUser.Username,
+                avatarUrl: avatar ?? client?.CurrentUser.GetAvatarUrl(),
+                allowedMentions: AllowedMentions.None
+            );
+        }
+        else {
+            chatChannel?.SendMessageAsync(
+                text: text,
+                embed: embed.Length <= 0
+                    ? null
+                    : new EmbedBuilder()
+                        .WithColor(color)
+                        .WithDescription(embed)
+                        .WithThumbnailUrl(thumbnail)
+                        .Build(),
+                allowedMentions: AllowedMentions.None
+            );
+        }
     }
 
-    public void OnPlayerChat(IServerPlayer player, int channelId, ref string message, ref string data, BoolRef consumed) {
-        string stripped = Regex.Replace(message, @"^((<.*>)?[^<>:]+:(</[^ ]*>)?) (.*)$", "$4");
-        chatChannel?.SendMessageAsync($"**[{player.PlayerName}]** {stripped}", allowedMentions: AllowedMentions.None);
+    public void SendMessageToDiscordConsole(string message) {
+        if (message.Length <= 0) {
+            return;
+        }
+
+        consoleChannel?.SendMessageAsync(message, allowedMentions: AllowedMentions.None).Wait();
+    }
+
+    public void SendMessageToGameChat(string message) {
+        if (message.Length <= 0) {
+            return;
+        }
+
+        Mod.Api?.SendMessageToGroup(GlobalConstants.GeneralChatGroup, message, EnumChatType.OthersMessage);
+    }
+
+    private void UpdatePresence() {
+        string format = Mod.Config.Messages.BotPresence;
+        if (format.Length > 0) {
+            client?.SetGameAsync(string.Format(pfp, format, Mod.Api?.World.AllOnlinePlayers.Length ?? 0));
+        }
     }
 
     public void Dispose() {
+        client?.Dispose();
+        client = null;
+
+        consoleQueue?.Dispose();
+        consoleQueue = null;
+
+        webhooks[0]?.Dispose();
+        webhooks[0] = null;
+        webhooks[1]?.Dispose();
+        webhooks[1] = null;
+
         chatChannel = null;
         consoleChannel = null;
+    }
 
-        client?.LogoutAsync().Wait();
-        client?.Dispose();
+    public static string GetClass(IPlayer player) {
+        return Lang.Get($"characterclass-{player.Entity.WatchedAttributes.GetString("characterClass")}");
+    }
 
-        client = null;
+    public static string GetAvatar(IPlayer player) {
+        ITreeAttribute appliedParts = (ITreeAttribute)player.Entity.WatchedAttributes.GetTreeAttribute("skinConfig")["appliedParts"];
+        return $"https://vs.pl3x.net/v1/" +
+               $"{appliedParts.GetString("baseskin")}/" +
+               $"{appliedParts.GetString("eyecolor")}/" +
+               $"{appliedParts.GetString("hairbase")}/" +
+               $"{appliedParts.GetString("hairextra")}/" +
+               $"{appliedParts.GetString("mustache")}/" +
+               $"{appliedParts.GetString("beard")}/" +
+               $"{appliedParts.GetString("haircolor")}.png";
     }
 }

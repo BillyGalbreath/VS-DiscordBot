@@ -4,6 +4,8 @@
         <TargetFramework>net7.0</TargetFramework>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <Nullable>enable</Nullable>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -19,12 +21,30 @@
             <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
             <Private>false</Private>
         </Reference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Discord.Net" Version="3.12.0">
-            <Private>true</Private>
-        </PackageReference>
+        <Reference Include="VintagestoryLib">
+            <HintPath>$(VINTAGE_STORY)/VintagestoryLib.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Essentials">
+            <HintPath>$(VINTAGE_STORY)/Mods/VSEssentials.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Survival">
+            <HintPath>$(VINTAGE_STORY)/Mods/VSSurvivalMod.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Harmony">
+            <HintPath>$(VINTAGE_STORY)/Lib/0Harmony.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="OpenTKGraphics">
+            <HintPath>$(VINTAGE_STORY)/Lib/OpenTK.Graphics.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="SkiaSharp">
+            <HintPath>$(VINTAGE_STORY)/Lib/SkiaSharp.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup Condition="'$(Configuration)' == 'Release'">
@@ -35,7 +55,19 @@
         </None>
     </ItemGroup>
 
+    <ItemGroup>
+        <PackageReference Include="Discord.Net" Version="3.12.0"/>
+    </ItemGroup>
 
+    <Target Name="FilterCopyLocalItems" AfterTargets="ResolvePackageDependenciesForBuild">
+        <ItemGroup>
+            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions'" />
+            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'Newtonsoft.Json'" />
+            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'System.Interactive.Async'" />
+            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'System.Linq.Async'" />
+            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'System.Reactive'" />
+        </ItemGroup>
+    </Target>
 
     <Target Name="CreateModsDirectory" AfterTargets="PostBuildEvent">
         <MakeDir Directories="bin/Mods"/>
