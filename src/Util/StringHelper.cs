@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
 
@@ -55,6 +54,6 @@ public static class StringHelper {
             }
         }
 
-        return Format.StripMarkDown(msg).Replace("<", "&lt;").Replace(">", "&gt;");
+        return msg;
     }
 }
