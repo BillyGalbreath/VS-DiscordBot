@@ -2,7 +2,7 @@
   "type": "code",
   "name": "DiscordBot",
   "modid": "vsdiscordbot",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Discord integration for Vintage Story",
   "website": "https://github.com/BillyGalbreath/VS-DiscordBot",
   "authors": [ "BillyGalbreath" ],
