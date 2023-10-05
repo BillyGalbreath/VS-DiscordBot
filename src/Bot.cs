@@ -114,6 +114,15 @@ public class Bot {
         webhooks[1] ??= new DiscordWebhookClient((chatChannel as IIntegrationChannel)?.CreateWebhookAsync("vs2").Result);
     }
 
+    public void OnRunGame() {
+        UpdatePresence();
+
+        string format = Mod.Config.Messages.ServerStarted;
+        if (format is { Length: > 0 }) {
+            SendMessageToDiscordChat(text: format);
+        }
+    }
+
     public void OnShutdown() {
         string format = Mod.Config.Messages.ServerStopped;
         if (format.Length > 0) {
@@ -124,46 +133,46 @@ public class Bot {
         client?.LogoutAsync().Wait();
     }
 
-    public void OnRunGame() {
-        UpdatePresence();
-
-        string format = Mod.Config.Messages.ServerStarted;
-        if (format.Length > 0) {
-            SendMessageToDiscordChat(text: format);
-        }
-    }
-
-    public void OnPlayerNowPlaying(IServerPlayer player) {
-        UpdatePresence();
-        string format = Mod.Config.Messages.PlayerJoined;
-        if (format.Length > 0) {
-            SendMessageToDiscordChat(0x00FF00, embed: string.Format(format, player.PlayerName, GetClass(player)), thumbnail: GetAvatar(player));
-        }
-    }
-
-    public void OnPlayerDisconnect(IServerPlayer player) {
+    public void OnPlayerConnect(IServerPlayer player, string? joinmessage = null) {
         Mod.Api?.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
-        string format = Mod.Config.Messages.PlayerLeft;
-        if (format.Length > 0) {
-            SendMessageToDiscordChat(0xFF0000, embed: string.Format(format, player.PlayerName));
+
+        string format = Mod.Config.Messages.PlayerJoined;
+        if (format is { Length: > 0 } && joinmessage is { Length: > 0 }) {
+            SendMessageToDiscordChat(0x00FF00, embed: string.Format(format, joinmessage, player.GetClass(), player.PlayerName), thumbnail: player.GetAvatar());
         }
     }
 
-    public void OnPlayerDeath(string deathMessage) {
+    public void OnPlayerDisconnect(IServerPlayer player, string? kickmessage = null) {
+        Mod.Api?.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
+
+        string format = Mod.Config.Messages.PlayerLeft;
+        if (format is { Length: > 0 } && kickmessage is { Length: > 0 }) {
+            SendMessageToDiscordChat(0xFF0000, embed: string.Format(format, kickmessage, player.PlayerName));
+        }
+    }
+
+    public void OnPlayerDeath(IServerPlayer player, string deathMessage) {
         string format = Mod.Config.Messages.PlayerDeath;
-        if (format.Length > 0) {
-            SendMessageToDiscordChat(0x121212, embed: string.Format(format, deathMessage));
+        if (format is { Length: > 0 }) {
+            SendMessageToDiscordChat(0x121212, embed: string.Format(format, deathMessage, player.PlayerName));
         }
     }
 
     public void OnPlayerChat(IServerPlayer player, int channelId, ref string message, ref string data, BoolRef consumed) {
         SendMessageToDiscordChat(text: Regex.Replace(message, @"^((<.*>)?[^<>:]+:(</[^ ]*>)?) (.*)$", "$4"),
-            username: player.PlayerName, avatar: GetAvatar(player));
+            username: player.PlayerName, avatar: player.GetAvatar());
+    }
+
+    public void OnCharacterSelection(IServerPlayer player) {
+        string format = Mod.Config.Messages.PlayerChangedCharacter;
+        if (format is { Length: > 0 }) {
+            SendMessageToDiscordChat(0xFFFF00, embed: string.Format(format, player.PlayerName, player.GetClass()), thumbnail: player.GetAvatar());
+        }
     }
 
     public void OnTemporalStormAnnounce(string message) {
         string format = Mod.Config.Messages.TemporalStorm;
-        if (format.Length > 0) {
+        if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0xFFFF00, embed: string.Format(format, message));
         }
     }
@@ -190,7 +199,7 @@ public class Bot {
     }
 
     private Task DiscordMessageReceived(SocketMessage message) {
-        if (client?.CurrentUser.Id == message.Author.Id || message.Author.IsBot || message.Author.IsWebhook || message.Content == "") {
+        if (client?.ShouldIgnore(message) ?? true) {
             return Task.CompletedTask;
         }
 
@@ -200,8 +209,7 @@ public class Bot {
                 return Task.CompletedTask;
             }
 
-            string author = message.Author is SocketGuildUser guildUser ? guildUser.DisplayName : message.Author.GlobalName ?? message.Author.Username;
-            SendMessageToGameChat(string.Format(format, author, StringUtil.SanitizeMessage(client, message)));
+            SendMessageToGameChat(string.Format(format, message.GetAuthor(), client.SanitizeMessage(message)));
         }
         else if (consoleChannel?.Id == message.Channel.Id) {
             // todo - perform command in console    
@@ -229,7 +237,7 @@ public class Bot {
         return Task.CompletedTask;
     }
 
-    public void SendMessageToDiscordChat(uint color = 0x0, string text = "", string embed = "", string? username = null, string? avatar = null, string? thumbnail = null) {
+    private void SendMessageToDiscordChat(uint color = 0x0, string text = "", string embed = "", string? username = null, string? avatar = null, string? thumbnail = null) {
         if (text.Length <= 0 && embed.Length <= 0) {
             return;
         }
@@ -260,7 +268,7 @@ public class Bot {
         }
         else {
             chatChannel?.SendMessageAsync(
-                text: text,
+                text: $"{username ?? client?.CurrentUser.Username}: {text}",
                 embed: embed.Length <= 0
                     ? null
                     : new EmbedBuilder()
@@ -273,20 +281,16 @@ public class Bot {
         }
     }
 
-    public void SendMessageToDiscordConsole(string message) {
-        if (message.Length <= 0) {
-            return;
+    private void SendMessageToDiscordConsole(string message) {
+        if (message.Length > 0) {
+            consoleChannel?.SendMessageAsync(message, allowedMentions: AllowedMentions.None).Wait();
         }
-
-        consoleChannel?.SendMessageAsync(message, allowedMentions: AllowedMentions.None).Wait();
     }
 
-    public void SendMessageToGameChat(string message) {
-        if (message.Length <= 0) {
-            return;
+    private void SendMessageToGameChat(string message) {
+        if (message.Length > 0) {
+            Mod.Api?.SendMessageToGroup(GlobalConstants.GeneralChatGroup, message, EnumChatType.OthersMessage);
         }
-
-        Mod.Api?.SendMessageToGroup(GlobalConstants.GeneralChatGroup, message, EnumChatType.OthersMessage);
     }
 
     private void UpdatePresence() {
@@ -310,21 +314,5 @@ public class Bot {
 
         chatChannel = null;
         consoleChannel = null;
-    }
-
-    public static string GetClass(IPlayer player) {
-        return Lang.Get($"characterclass-{player.Entity.WatchedAttributes.GetString("characterClass")}");
-    }
-
-    public static string GetAvatar(IPlayer player) {
-        ITreeAttribute appliedParts = (ITreeAttribute)player.Entity.WatchedAttributes.GetTreeAttribute("skinConfig")["appliedParts"];
-        return $"https://vs.pl3x.net/v1/" +
-               $"{appliedParts.GetString("baseskin")}/" +
-               $"{appliedParts.GetString("eyecolor")}/" +
-               $"{appliedParts.GetString("hairbase")}/" +
-               $"{appliedParts.GetString("hairextra")}/" +
-               $"{appliedParts.GetString("mustache")}/" +
-               $"{appliedParts.GetString("beard")}/" +
-               $"{appliedParts.GetString("haircolor")}.png";
     }
 }

@@ -5,8 +5,8 @@ using Discord.WebSocket;
 
 namespace DiscordBot.Util;
 
-public abstract class StringUtil {
-    public static string SanitizeMessage(DiscordSocketClient? client, SocketMessage message) {
+public static class StringHelper {
+    public static string SanitizeMessage(this DiscordSocketClient? client, SocketMessage message) {
         string msg = message.Content;
         ulong? guildId = (message.Channel as SocketTextChannel)?.Guild.Id;
 

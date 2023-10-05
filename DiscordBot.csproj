@@ -47,16 +47,16 @@
         </Reference>
     </ItemGroup>
 
+    <ItemGroup>
+        <PackageReference Include="Discord.Net" Version="3.12.0"/>
+    </ItemGroup>
+
     <ItemGroup Condition="'$(Configuration)' == 'Release'">
         <None Include="LICENSE" CopyToOutputDirectory="PreserveNewest"/>
         <None Include="resources/**">
             <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Discord.Net" Version="3.12.0"/>
     </ItemGroup>
 
     <Target Name="FilterCopyLocalItems" AfterTargets="ResolvePackageDependenciesForBuild">
