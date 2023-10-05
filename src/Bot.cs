@@ -1,10 +1,12 @@
 ﻿using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Webhook;
 using Discord.WebSocket;
 using DiscordBot.Util;
+using HarmonyLib;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
@@ -189,6 +191,12 @@ public class Bot {
     }
 
     public void OnLoggerEntryAdded(EnumLogType logType, string message, object[] args) {
+        if (!(bool)(AccessTools.TypeByName("SilentSave.SilentSaveMod")
+                .GetField("allowLogger", BindingFlags.NonPublic | BindingFlags.Static)?
+                .GetValue(null) ?? true)) {
+            return;
+        }
+
         switch (logType) {
             case EnumLogType.Chat:
             case EnumLogType.Event:
