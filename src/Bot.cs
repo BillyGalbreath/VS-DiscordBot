@@ -91,8 +91,18 @@ public class Bot {
             consoleQueue = new MessageQueue();
 
             Mod.Api?.Event.RegisterGameTickListener(_ => {
-                foreach (string lines in consoleQueue.Process()) {
-                    SendMessageToDiscordConsole(lines);
+                foreach (string line in consoleQueue.Process()) {
+                    string text = line;
+                    while (text.Length > 0) {
+                        if (text.Length > 2000) {
+                            SendMessageToDiscordConsole(text[..2000]);
+                            text = text[2000..];
+                            continue;
+                        }
+
+                        SendMessageToDiscordConsole(text);
+                        break;
+                    }
                 }
             }, 1000);
         }
