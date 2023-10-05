@@ -9,6 +9,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
+using Vintagestory.Server;
 
 namespace DiscordBot;
 
@@ -222,7 +223,7 @@ public class Bot {
             SendMessageToGameChat(string.Format(format, message.GetAuthor(), client.SanitizeMessage(message)));
         }
         else if (consoleChannel?.Id == message.Channel.Id) {
-            // todo - perform command in console    
+            ((ServerMain)Mod.Api!.World).ReceiveServerConsole($"/{message}");
         }
 
         return Task.CompletedTask;
