@@ -191,7 +191,7 @@ public class Bot {
     }
 
     public void OnLoggerEntryAdded(EnumLogType logType, string message, object[] args) {
-        if (!(bool)(AccessTools.TypeByName("SilentSave.SilentSaveMod")
+        if (!(bool)(AccessTools.TypeByName("SilentSave.SilentSaveMod")?
                 .GetField("allowLogger", BindingFlags.NonPublic | BindingFlags.Static)?
                 .GetValue(null) ?? true)) {
             return;
