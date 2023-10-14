@@ -173,6 +173,9 @@ public class Bot {
     }
 
     public void OnPlayerChat(IServerPlayer player, int channelId, ref string message, ref string data, BoolRef consumed) {
+        if (channelId != 0) {
+            return; // ignore non-global chat
+        }
         SendMessageToDiscordChat(text: Regex.Replace(message, @"^((<.*>)?[^<>:]+:(</[^ ]*>)?) (.*)$", "$4"),
             username: player.PlayerName, avatar: player.GetAvatar());
     }
