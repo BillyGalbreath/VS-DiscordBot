@@ -112,7 +112,8 @@ public class Bot {
     }
 
     private void SetupWebhooks() {
-        foreach (IWebhook webhook in chatChannel?.GetWebhooksAsync().Result ?? Enumerable.Empty<IWebhook>()) {
+        SocketTextChannel? channel = (SocketTextChannel?)(chatChannel is SocketThreadChannel thread ? thread.ParentChannel : chatChannel);
+        foreach (IWebhook webhook in channel?.GetWebhooksAsync().Result ?? Enumerable.Empty<IWebhook>()) {
             switch (webhook.Name) {
                 case "vs1":
                     webhooks[0] = new DiscordWebhookClient(webhook);
@@ -123,8 +124,8 @@ public class Bot {
             }
         }
 
-        webhooks[0] ??= new DiscordWebhookClient((chatChannel as IIntegrationChannel)?.CreateWebhookAsync("vs1").Result);
-        webhooks[1] ??= new DiscordWebhookClient((chatChannel as IIntegrationChannel)?.CreateWebhookAsync("vs2").Result);
+        webhooks[0] ??= new DiscordWebhookClient((channel as IIntegrationChannel)?.CreateWebhookAsync("vs1").Result);
+        webhooks[1] ??= new DiscordWebhookClient((channel as IIntegrationChannel)?.CreateWebhookAsync("vs2").Result);
     }
 
     public void OnRunGame() {
@@ -282,7 +283,8 @@ public class Bot {
                     },
                 username: username ?? client?.CurrentUser.Username,
                 avatarUrl: avatar ?? client?.CurrentUser.GetAvatarUrl(),
-                allowedMentions: AllowedMentions.None
+                allowedMentions: AllowedMentions.None,
+                threadId: chatChannel is SocketThreadChannel thread ? thread.Id : null
             );
         }
         else {
