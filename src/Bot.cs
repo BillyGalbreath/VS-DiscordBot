@@ -140,7 +140,7 @@ public class Bot {
     public void OnShutdown() {
         string format = Mod.Config.Messages.ServerStopped;
         if (format.Length > 0) {
-            chatChannel?.SendMessageAsync(text: format, allowedMentions: AllowedMentions.None)!.Wait();
+            SendMessageToDiscordChat(text: format, wait: true);
         }
 
         client?.StopAsync().Wait();
@@ -257,7 +257,7 @@ public class Bot {
         return Task.CompletedTask;
     }
 
-    private void SendMessageToDiscordChat(uint color = 0x0, string text = "", string embed = "", string? username = null, string? avatar = null, string? thumbnail = null) {
+    private void SendMessageToDiscordChat(uint color = 0x0, string text = "", string embed = "", string? username = null, string? avatar = null, string? thumbnail = null, bool wait = false) {
         if (text.Length <= 0 && embed.Length <= 0) {
             return;
         }
@@ -270,7 +270,7 @@ public class Bot {
         DiscordWebhookClient? webhook = webhooks[curWebhook];
 
         if (webhook != null) {
-            webhook.SendMessageAsync(
+            var task = webhook.SendMessageAsync(
                 text: text,
                 embeds: embed.Length <= 0
                     ? null
@@ -286,9 +286,12 @@ public class Bot {
                 allowedMentions: AllowedMentions.None,
                 threadId: chatChannel is SocketThreadChannel thread ? thread.Id : null
             );
+            if (wait) {
+                task?.Wait();
+            }
         }
         else {
-            chatChannel?.SendMessageAsync(
+            var task = chatChannel?.SendMessageAsync(
                 text: $"{username ?? client?.CurrentUser.Username}: {text}",
                 embed: embed.Length <= 0
                     ? null
@@ -299,6 +302,9 @@ public class Bot {
                         .Build(),
                 allowedMentions: AllowedMentions.None
             );
+            if (wait) {
+                task?.Wait();
+            }
         }
     }
 
