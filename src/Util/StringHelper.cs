@@ -54,6 +54,10 @@ public static class StringHelper {
             }
         }
 
-        return msg;
+        foreach (Match match in Regex.Matches(msg, "<:(.+):\\d+>")) {
+            msg = msg.Replace(match.Value, $":{match.Groups[1].Value}:");
+        }
+
+        return EmojiOne.EmojiOne.ToShort(msg);
     }
 }
