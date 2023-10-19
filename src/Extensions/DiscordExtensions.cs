@@ -2,10 +2,18 @@
 using Discord.Rest;
 using Discord.WebSocket;
 
-namespace DiscordBot.Util;
+namespace DiscordBot.Extensions;
 
-public static class StringHelper {
-    public static string SanitizeMessage(this DiscordSocketClient? client, SocketMessage message) {
+public static class DiscordExtensions {
+    public static string GetAuthor(this SocketMessage message) {
+        return message.Author is SocketGuildUser guildUser ? guildUser.DisplayName : message.Author.GlobalName ?? message.Author.Username;
+    }
+
+    public static bool ShouldIgnore(this DiscordSocketClient client, SocketMessage message) {
+        return client.CurrentUser.Id == message.Author.Id || message.Author.IsBot || message.Author.IsWebhook || message.Content == "";
+    }
+    
+    public static string SanitizeMessage(this DiscordSocketClient client, SocketMessage message) {
         string msg = message.Content;
         ulong? guildId = (message.Channel as SocketTextChannel)?.Guild.Id;
 
@@ -21,7 +29,7 @@ public static class StringHelper {
                         name = mGuildUser.DisplayName;
                         break;
                     case SocketUnknownUser: {
-                        RestGuildUser? rgUser = client!.Rest.GetGuildUserAsync(guildId ?? 0, mUser.Id).GetAwaiter().GetResult();
+                        RestGuildUser? rgUser = client.Rest.GetGuildUserAsync(guildId ?? 0, mUser.Id).GetAwaiter().GetResult();
                         name = rgUser.DisplayName;
                         break;
                     }

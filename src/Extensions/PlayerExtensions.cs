@@ -2,9 +2,9 @@
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
 
-namespace DiscordBot.Util;
+namespace DiscordBot.Extensions;
 
-public static class PlayerHelper {
+public static class PlayerExtensions {
     public static string GetClass(this IServerPlayer player) {
         return Lang.Get($"characterclass-{player.Entity.WatchedAttributes.GetString("characterClass")}");
     }

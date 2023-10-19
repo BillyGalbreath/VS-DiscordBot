@@ -1,6 +1,10 @@
-﻿namespace DiscordBot.Config;
+﻿using Vintagestory.API.Common;
 
-public class Config {
+namespace DiscordBot.Config;
+
+public class BotConfig {
+    public const string File = "discordbot.json"; 
+    
     public string Token = "your-bot-token";
     public ulong ChatChannel = 0;
     public ulong ConsoleChannel = 0;

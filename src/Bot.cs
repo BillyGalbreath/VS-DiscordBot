@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Webhook;
 using Discord.WebSocket;
+using DiscordBot.Config;
+using DiscordBot.Extensions;
 using DiscordBot.Util;
 using HarmonyLib;
 using Vintagestory.API.Common;
@@ -16,7 +18,8 @@ using Vintagestory.Server;
 namespace DiscordBot;
 
 public class Bot {
-    private readonly PluralFormatProvider pfp;
+    private readonly PluralFormatProvider pfp = new();
+    private readonly BotConfig config;
 
     private DiscordSocketClient? client;
 
@@ -29,16 +32,26 @@ public class Bot {
     private int curWebhook = 1;
     private string? lastAuthor;
 
-    private DiscordBotMod Mod { get; }
+    private ICoreServerAPI Api { get; }
+    private ILogger Logger { get; }
 
-    public Bot(DiscordBotMod mod) {
-        Mod = mod;
-        pfp = new PluralFormatProvider();
+    public Bot(ILogger logger, ICoreServerAPI api) {
+        Api = api;
+        Logger = logger;
+
+        api.StoreModConfig(config = api.LoadModConfig<BotConfig>(BotConfig.File) ?? new BotConfig(), BotConfig.File);
+
+        api.Event.ServerRunPhase(EnumServerRunPhase.RunGame, OnRunGame);
+        api.Event.ServerRunPhase(EnumServerRunPhase.Shutdown, OnShutdown);
+
+        api.Event.PlayerChat += OnPlayerChat;
+        api.Server.Logger.EntryAdded += OnLoggerEntryAdded;
     }
 
     public async Task Connect() {
         client = new DiscordSocketClient(new DiscordSocketConfig {
-            GatewayIntents = //GatewayIntents.AutoModerationActionExecution |
+            GatewayIntents =
+                //GatewayIntents.AutoModerationActionExecution |
                 //GatewayIntents.AutoModerationConfiguration |
                 //GatewayIntents.GuildScheduledEvents |
                 //GatewayIntents.DirectMessageTyping |
@@ -59,7 +72,7 @@ public class Bot {
                 GatewayIntents.GuildMembers
         });
 
-        await client.LoginAsync(TokenType.Bot, Mod.Config.Token);
+        await client.LoginAsync(TokenType.Bot, config.Token);
         await client.StartAsync();
 
         var ready = new TaskCompletionSource<bool>();
@@ -80,20 +93,20 @@ public class Bot {
 
         client.Log += ClientLogToConsole;
 
-        if (Mod.Config.ChatChannel != 0) {
-            chatChannel = client.GetChannel(Mod.Config.ChatChannel) as SocketTextChannel;
+        if (config.ChatChannel != 0) {
+            chatChannel = client.GetChannel(config.ChatChannel) as SocketTextChannel;
 
             SetupWebhooks();
 
             client.MessageReceived += DiscordMessageReceived;
         }
 
-        if (Mod.Config.ConsoleChannel != 0) {
-            consoleChannel = client.GetChannel(Mod.Config.ConsoleChannel) as SocketTextChannel;
+        if (config.ConsoleChannel != 0) {
+            consoleChannel = client.GetChannel(config.ConsoleChannel) as SocketTextChannel;
 
             consoleQueue = new MessageQueue();
 
-            Mod.Api?.Event.RegisterGameTickListener(_ => {
+            Api.Event.RegisterGameTickListener(_ => {
                 foreach (string line in consoleQueue.Process()) {
                     string text = line;
                     while (text.Length > 0) {
@@ -131,14 +144,14 @@ public class Bot {
     public void OnRunGame() {
         UpdatePresence();
 
-        string format = Mod.Config.Messages.ServerStarted;
+        string format = config.Messages.ServerStarted;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(text: format);
         }
     }
 
     public void OnShutdown() {
-        string format = Mod.Config.Messages.ServerStopped;
+        string format = config.Messages.ServerStopped;
         if (format.Length > 0) {
             SendMessageToDiscordChat(text: format, wait: true);
         }
@@ -148,25 +161,25 @@ public class Bot {
     }
 
     public void OnPlayerConnect(IServerPlayer player, string? joinmessage = null) {
-        Mod.Api?.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
+        Api.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
 
-        string format = Mod.Config.Messages.PlayerJoined;
+        string format = config.Messages.PlayerJoined;
         if (format is { Length: > 0 } && joinmessage is { Length: > 0 }) {
             SendMessageToDiscordChat(0x00FF00, embed: string.Format(format, joinmessage, player.GetClass(), player.PlayerName), thumbnail: player.GetAvatar());
         }
     }
 
     public void OnPlayerDisconnect(IServerPlayer player, string? kickmessage = null) {
-        Mod.Api?.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
+        Api.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
 
-        string format = Mod.Config.Messages.PlayerLeft;
+        string format = config.Messages.PlayerLeft;
         if (format is { Length: > 0 } && kickmessage is { Length: > 0 }) {
             SendMessageToDiscordChat(0xFF0000, embed: string.Format(format, kickmessage, player.PlayerName));
         }
     }
 
     public void OnPlayerDeath(IServerPlayer player, string deathMessage) {
-        string format = Mod.Config.Messages.PlayerDeath;
+        string format = config.Messages.PlayerDeath;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0x121212, embed: string.Format(format, deathMessage, player.PlayerName));
         }
@@ -176,19 +189,20 @@ public class Bot {
         if (channelId != 0) {
             return; // ignore non-global chat
         }
+
         SendMessageToDiscordChat(text: Regex.Replace(message, @"^((<.*>)?[^<>:]+:(</[^ ]*>)?) (.*)$", "$4"),
             username: player.PlayerName, avatar: player.GetAvatar());
     }
 
     public void OnCharacterSelection(IServerPlayer player) {
-        string format = Mod.Config.Messages.PlayerChangedCharacter;
+        string format = config.Messages.PlayerChangedCharacter;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0xFFFF00, embed: string.Format(format, player.PlayerName, player.GetClass()), thumbnail: player.GetAvatar());
         }
     }
 
     public void OnTemporalStormAnnounce(string message) {
-        string format = Mod.Config.Messages.TemporalStorm;
+        string format = config.Messages.TemporalStorm;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0xFFFF00, embed: string.Format(format, message));
         }
@@ -227,7 +241,7 @@ public class Bot {
         }
 
         if (chatChannel?.Id == message.Channel.Id) {
-            string format = Mod.Config.Messages.PlayerChat;
+            string format = config.Messages.PlayerChat;
             if (format.Length <= 0) {
                 return Task.CompletedTask;
             }
@@ -235,7 +249,7 @@ public class Bot {
             SendMessageToGameChat(string.Format(format, message.GetAuthor(), client.SanitizeMessage(message)));
         }
         else if (consoleChannel?.Id == message.Channel.Id) {
-            ((ServerMain)Mod.Api!.World).ReceiveServerConsole($"/{message}");
+            ((ServerMain)Api.World).ReceiveServerConsole($"/{message}");
         }
 
         return Task.CompletedTask;
@@ -244,13 +258,13 @@ public class Bot {
     private Task ClientLogToConsole(LogMessage msg) {
         switch (msg.Severity) {
             case LogSeverity.Critical or LogSeverity.Error:
-                Mod.Logger.Error(msg.Message ?? msg.Exception.Message);
+                Logger.Error(msg.Message ?? msg.Exception.Message);
                 break;
             case LogSeverity.Warning:
-                Mod.Logger.Warning(msg.Message ?? msg.Exception.Message);
+                Logger.Warning(msg.Message ?? msg.Exception.Message);
                 break;
             case LogSeverity.Info:
-                Mod.Logger.Event(msg.Message ?? msg.Exception.Message);
+                Logger.Event(msg.Message ?? msg.Exception.Message);
                 break;
             case LogSeverity.Verbose or LogSeverity.Debug:
                 /* do nothing */
@@ -319,18 +333,21 @@ public class Bot {
 
     private void SendMessageToGameChat(string message) {
         if (message.Length > 0) {
-            Mod.Api?.SendMessageToGroup(GlobalConstants.GeneralChatGroup, message, EnumChatType.OthersMessage);
+            Api.SendMessageToGroup(GlobalConstants.GeneralChatGroup, message, EnumChatType.OthersMessage);
         }
     }
 
     private void UpdatePresence() {
-        string format = Mod.Config.Messages.BotPresence;
+        string format = config.Messages.BotPresence;
         if (format.Length > 0) {
-            client?.SetGameAsync(string.Format(pfp, format, Mod.Api?.World.AllOnlinePlayers.Length ?? 0));
+            client?.SetGameAsync(string.Format(pfp, format, Api.World.AllOnlinePlayers.Length));
         }
     }
 
     public void Dispose() {
+        Api.Event.PlayerChat -= OnPlayerChat;
+        Api.Server.Logger.EntryAdded -= OnLoggerEntryAdded;
+
         client?.Dispose();
         client = null;
 
