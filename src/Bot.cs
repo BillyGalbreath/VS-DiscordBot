@@ -1,10 +1,12 @@
-﻿using System.Linq;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Webhook;
 using Discord.WebSocket;
+using DiscordBot.Command;
 using DiscordBot.Config;
 using DiscordBot.Extensions;
 using DiscordBot.Util;
@@ -17,9 +19,9 @@ using Vintagestory.Server;
 
 namespace DiscordBot;
 
+[SuppressMessage("GeneratedRegex", "SYSLIB1045:Convert to \'GeneratedRegexAttribute\'.")]
 public class Bot {
     private readonly PluralFormatProvider pfp = new();
-    private readonly BotConfig config;
 
     private DiscordSocketClient? client;
 
@@ -28,18 +30,24 @@ public class Bot {
 
     private MessageQueue? consoleQueue;
 
+    private readonly CommandHandler commandHandler;
+
     private readonly DiscordWebhookClient?[] webhooks = new DiscordWebhookClient?[2];
     private int curWebhook = 1;
     private string? lastAuthor;
 
-    private ICoreServerAPI Api { get; }
-    private ILogger Logger { get; }
+    public ICoreServerAPI Api { get; }
+    public BotConfig Config { get; }
+    public ILogger Logger { get; }
 
     public Bot(ILogger logger, ICoreServerAPI api) {
         Api = api;
         Logger = logger;
 
-        api.StoreModConfig(config = api.LoadModConfig<BotConfig>(BotConfig.File) ?? new BotConfig(), BotConfig.File);
+        Config = api.LoadModConfig<BotConfig>(BotConfig.File) ?? new BotConfig();
+        api.StoreModConfig(Config, BotConfig.File);
+
+        commandHandler = new CommandHandler(this);
 
         api.Event.ServerRunPhase(EnumServerRunPhase.RunGame, OnRunGame);
         api.Event.ServerRunPhase(EnumServerRunPhase.Shutdown, OnShutdown);
@@ -72,7 +80,7 @@ public class Bot {
                 GatewayIntents.GuildMembers
         });
 
-        await client.LoginAsync(TokenType.Bot, config.Token);
+        await client.LoginAsync(TokenType.Bot, Config.Token);
         await client.StartAsync();
 
         var ready = new TaskCompletionSource<bool>();
@@ -92,17 +100,20 @@ public class Bot {
         }
 
         client.Log += ClientLogToConsole;
+        client.SlashCommandExecuted += commandHandler.HandleSlashCommands;
 
-        if (config.ChatChannel != 0) {
-            chatChannel = client.GetChannel(config.ChatChannel) as SocketTextChannel;
+        commandHandler.Register(client);
+
+        if (Config.ChatChannel != 0) {
+            chatChannel = client.GetChannel(Config.ChatChannel) as SocketTextChannel;
 
             SetupWebhooks();
 
             client.MessageReceived += DiscordMessageReceived;
         }
 
-        if (config.ConsoleChannel != 0) {
-            consoleChannel = client.GetChannel(config.ConsoleChannel) as SocketTextChannel;
+        if (Config.ConsoleChannel != 0) {
+            consoleChannel = client.GetChannel(Config.ConsoleChannel) as SocketTextChannel;
 
             consoleQueue = new MessageQueue();
 
@@ -141,17 +152,17 @@ public class Bot {
         webhooks[1] ??= new DiscordWebhookClient((channel as IIntegrationChannel)?.CreateWebhookAsync("vs2").Result);
     }
 
-    public void OnRunGame() {
+    private void OnRunGame() {
         UpdatePresence();
 
-        string format = config.Messages.ServerStarted;
+        string format = Config.Messages.ServerStarted;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(text: format);
         }
     }
 
-    public void OnShutdown() {
-        string format = config.Messages.ServerStopped;
+    private void OnShutdown() {
+        string format = Config.Messages.ServerStopped;
         if (format.Length > 0) {
             SendMessageToDiscordChat(text: format, wait: true);
         }
@@ -163,7 +174,7 @@ public class Bot {
     public void OnPlayerConnect(IServerPlayer player, string? joinmessage = null) {
         Api.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
 
-        string format = config.Messages.PlayerJoined;
+        string format = Config.Messages.PlayerJoined;
         if (format is { Length: > 0 } && joinmessage is { Length: > 0 }) {
             SendMessageToDiscordChat(0x00FF00, embed: string.Format(format, joinmessage, player.GetClass(), player.PlayerName), thumbnail: player.GetAvatar());
         }
@@ -172,20 +183,20 @@ public class Bot {
     public void OnPlayerDisconnect(IServerPlayer player, string? kickmessage = null) {
         Api.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
 
-        string format = config.Messages.PlayerLeft;
+        string format = Config.Messages.PlayerLeft;
         if (format is { Length: > 0 } && kickmessage is { Length: > 0 }) {
             SendMessageToDiscordChat(0xFF0000, embed: string.Format(format, kickmessage, player.PlayerName));
         }
     }
 
     public void OnPlayerDeath(IServerPlayer player, string deathMessage) {
-        string format = config.Messages.PlayerDeath;
+        string format = Config.Messages.PlayerDeath;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0x121212, embed: string.Format(format, deathMessage, player.PlayerName));
         }
     }
 
-    public void OnPlayerChat(IServerPlayer player, int channelId, ref string message, ref string data, BoolRef consumed) {
+    private void OnPlayerChat(IServerPlayer player, int channelId, ref string message, ref string data, BoolRef consumed) {
         if (channelId != 0) {
             return; // ignore non-global chat
         }
@@ -195,20 +206,20 @@ public class Bot {
     }
 
     public void OnCharacterSelection(IServerPlayer player) {
-        string format = config.Messages.PlayerChangedCharacter;
+        string format = Config.Messages.PlayerChangedCharacter;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0xFFFF00, embed: string.Format(format, player.PlayerName, player.GetClass()), thumbnail: player.GetAvatar());
         }
     }
 
     public void OnTemporalStormAnnounce(string message) {
-        string format = config.Messages.TemporalStorm;
+        string format = Config.Messages.TemporalStorm;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0xFFFF00, embed: string.Format(format, message));
         }
     }
 
-    public void OnLoggerEntryAdded(EnumLogType logType, string message, object[] args) {
+    private void OnLoggerEntryAdded(EnumLogType logType, string message, object[] args) {
         if (!(bool)(AccessTools.TypeByName("SilentSave.SilentSaveMod")?
                 .GetField("allowLogger", BindingFlags.NonPublic | BindingFlags.Static)?
                 .GetValue(null) ?? true)) {
@@ -241,7 +252,7 @@ public class Bot {
         }
 
         if (chatChannel?.Id == message.Channel.Id) {
-            string format = config.Messages.PlayerChat;
+            string format = Config.Messages.PlayerChat;
             if (format.Length <= 0) {
                 return Task.CompletedTask;
             }
@@ -338,7 +349,7 @@ public class Bot {
     }
 
     private void UpdatePresence() {
-        string format = config.Messages.BotPresence;
+        string format = Config.Messages.BotPresence;
         if (format.Length > 0) {
             client?.SetGameAsync(string.Format(pfp, format, Api.World.AllOnlinePlayers.Length));
         }
@@ -348,8 +359,13 @@ public class Bot {
         Api.Event.PlayerChat -= OnPlayerChat;
         Api.Server.Logger.EntryAdded -= OnLoggerEntryAdded;
 
-        client?.Dispose();
-        client = null;
+        if (client != null) {
+            client.Log -= ClientLogToConsole;
+            client.SlashCommandExecuted -= commandHandler.HandleSlashCommands;
+
+            client.Dispose();
+            client = null;
+        }
 
         consoleQueue?.Dispose();
         consoleQueue = null;

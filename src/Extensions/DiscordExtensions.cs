@@ -1,9 +1,13 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Discord.Rest;
 using Discord.WebSocket;
 
 namespace DiscordBot.Extensions;
 
+[SuppressMessage("GeneratedRegex", "SYSLIB1045:Convert to \'GeneratedRegexAttribute\'.")]
 public static class DiscordExtensions {
     public static string GetAuthor(this SocketMessage message) {
         return message.Author is SocketGuildUser guildUser ? guildUser.DisplayName : message.Author.GlobalName ?? message.Author.Username;
@@ -12,7 +16,11 @@ public static class DiscordExtensions {
     public static bool ShouldIgnore(this DiscordSocketClient client, SocketMessage message) {
         return client.CurrentUser.Id == message.Author.Id || message.Author.IsBot || message.Author.IsWebhook || message.Content == "";
     }
-    
+
+    public static T? Get<T>(this IEnumerable<SocketSlashCommandDataOption> collection, string name) {
+        return (T?)(from option in collection where option.Name.Equals(name) select option.Value).FirstOrDefault();
+    }
+
     public static string SanitizeMessage(this DiscordSocketClient client, SocketMessage message) {
         string msg = message.Content;
         ulong? guildId = (message.Channel as SocketTextChannel)?.Guild.Id;
