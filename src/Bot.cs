@@ -114,24 +114,7 @@ public class Bot {
 
         if (Config.ConsoleChannel != 0) {
             consoleChannel = client.GetChannel(Config.ConsoleChannel) as SocketTextChannel;
-
-            consoleQueue = new MessageQueue();
-
-            Api.Event.RegisterGameTickListener(_ => {
-                foreach (string line in consoleQueue.Process()) {
-                    string text = line;
-                    while (text.Length > 0) {
-                        if (text.Length > 2000) {
-                            SendMessageToDiscordConsole(text[..2000]);
-                            text = text[2000..];
-                            continue;
-                        }
-
-                        SendMessageToDiscordConsole(text);
-                        break;
-                    }
-                }
-            }, 1000);
+            consoleQueue = new MessageQueue(this);
         }
     }
 
@@ -336,7 +319,7 @@ public class Bot {
         }
     }
 
-    private void SendMessageToDiscordConsole(string message) {
+    internal void SendMessageToDiscordConsole(string message) {
         if (message.Length > 0) {
             consoleChannel?.SendMessageAsync(message, allowedMentions: AllowedMentions.None).Wait();
         }
