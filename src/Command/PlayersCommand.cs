@@ -19,7 +19,7 @@ public class PlayersCommand : Command {
     }
 
     public override async Task HandleCommand(Bot bot, SocketSlashCommand command) {
-        BotConfig.ConfigCommands.Command config = bot.Config.Commands.Players;
+        BotConfig.ConfigCommands.ConfigPlayersCommand config = bot.Config.Commands.ConfigPlayers;
 
         bool ping = command.Data.Options.Get<bool?>("ping") ?? false;
         var list = (IServerPlayer[])bot.Api.World.AllOnlinePlayers;

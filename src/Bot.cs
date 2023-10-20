@@ -44,8 +44,7 @@ public class Bot {
         Api = api;
         Logger = logger;
 
-        Config = api.LoadModConfig<BotConfig>(BotConfig.File) ?? new BotConfig();
-        api.StoreModConfig(Config, BotConfig.File);
+        Config = BotConfig.Reload(this);
 
         commandHandler = new CommandHandler(this);
 
@@ -334,7 +333,7 @@ public class Bot {
     private void UpdatePresence() {
         string format = Config.Messages.BotPresence;
         if (format.Length > 0) {
-            client?.SetGameAsync(string.Format(pfp, format, Api.World.AllOnlinePlayers.Length));
+            client?.SetGameAsync(string.Format(pfp, format, Api.World.AllOnlinePlayers.Length, Api.Server.Config.MaxClients));
         }
     }
 
