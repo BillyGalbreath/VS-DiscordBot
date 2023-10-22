@@ -10,17 +10,17 @@ using Vintagestory.API.Server;
 namespace DiscordBot.Command;
 
 public class PlayersCommand : Command {
-    public PlayersCommand() : base("players", "List current online players") {
+    public PlayersCommand(Bot bot) : base("players", bot.Config.Commands.Players.Help) {
         Options.Add(new Option {
             Name = "ping",
             Type = ApplicationCommandOptionType.Boolean,
-            Description = "Show players' ping",
+            Description = bot.Config.Commands.Players.HelpPing,
             IsRequired = false
         });
     }
 
     public override async Task HandleCommand(Bot bot, SocketSlashCommand command) {
-        BotConfig.ConfigCommands.ConfigPlayersCommand config = bot.Config.Commands.ConfigPlayers;
+        BotConfig.ConfigCommands.ConfigPlayersCommand config = bot.Config.Commands.Players;
 
         bool ping = command.Data.Options.Get<bool?>("ping") ?? false;
         var list = (IServerPlayer[])bot.Api.World.AllOnlinePlayers;
@@ -29,14 +29,14 @@ public class PlayersCommand : Command {
             .WithColor(config.Color);
 
         if (config.Title is { Length: > 0 }) {
-            embed.WithTitle(string.Format(config.Title, list.Length, bot.Api.Server.Config.MaxClients));
+            embed.WithTitle(config.Title.Format(list.Length, bot.Api.Server.Config.MaxClients));
         }
 
         if (config.PlayersFields && list.Length > 0) {
             embed.WithFields(from player in list
                 let milli = TimeSpan.FromSeconds(player.Ping).Milliseconds
-                let title = string.Format(ping ? config.PlayersFieldsTitleWithPing : config.PlayersFieldsTitle, player.PlayerName, milli)
-                let value = string.Format(ping ? config.PlayersFieldsValueWithPing : config.PlayersFieldsValue, player.PlayerName, milli)
+                let title = (ping ? config.PlayersFieldsTitleWithPing : config.PlayersFieldsTitle).Format(player.PlayerName, milli)
+                let value = (ping ? config.PlayersFieldsValueWithPing : config.PlayersFieldsValue).Format(player.PlayerName, milli)
                 select new EmbedFieldBuilder()
                     .WithName(title is { Length: > 0 } ? title : "\u200B")
                     .WithValue(value is { Length: > 0 } ? value : "\u200B")
@@ -44,10 +44,10 @@ public class PlayersCommand : Command {
             );
         }
         else {
-            embed.WithDescription(string.Format(config.PlayersList, list.Length > 0
+            embed.WithDescription(config.PlayersList.Format(list.Length > 0
                 ? list.Aggregate("", (current, player) => {
                     string format = ping ? config.PlayersListEntryWithPing : config.PlayersListEntry;
-                    string name = string.Format(format, player.PlayerName, TimeSpan.FromSeconds(player.Ping).Milliseconds);
+                    string name = format.Format(player.PlayerName, TimeSpan.FromSeconds(player.Ping).Milliseconds);
                     return current + name;
                 })
                 : config.NoPlayersOnline)

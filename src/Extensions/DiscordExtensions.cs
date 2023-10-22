@@ -20,6 +20,10 @@ public static class DiscordExtensions {
     public static T? Get<T>(this IEnumerable<SocketSlashCommandDataOption> collection, string name) {
         return (T?)(from option in collection where option.Name.Equals(name) select option.Value).FirstOrDefault();
     }
+    
+    public static bool Contains(this IEnumerable<SocketApplicationCommand> collection, Command.Command command) {
+        return collection.Any(applicationCommand => applicationCommand.Name == command.Name);
+    }
 
     public static string SanitizeMessage(this DiscordSocketClient client, SocketMessage message) {
         string msg = message.Content;

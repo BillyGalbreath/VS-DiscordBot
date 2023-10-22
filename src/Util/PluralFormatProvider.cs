@@ -8,7 +8,16 @@ public class PluralFormatProvider : IFormatProvider, ICustomFormatter {
     }
 
     public string Format(string? format, object? arg, IFormatProvider? formatProvider) {
-        int value = (int)(arg ?? 0);
-        return $"{value} {(format ?? "").Split(';')[value == 1 ? 0 : 1]}";
+        if (format == null) {
+            return $"{arg}";
+        }
+
+        if (!format.Contains(';')) {
+            // ReSharper disable FormatStringProblem
+            return string.Format("{0:" + format + "}", arg);
+        }
+
+        int i = (int)(arg ?? 0) == 1 ? 0 : 1;
+        return $"{arg} {format.Split(';')[i]}";
     }
 }

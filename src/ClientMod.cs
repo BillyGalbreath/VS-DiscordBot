@@ -23,7 +23,7 @@ public class ClientMod {
     private readonly ICoreClientAPI capi;
     private readonly ClientPlatformAbstract platform;
 
-    private SKBitmap bitmap, rotated, cropped, scaled;
+    private SKBitmap? bitmap, rotated, cropped;
 
     public ClientMod(ICoreClientAPI api) {
         capi = api;

@@ -21,8 +21,6 @@ namespace DiscordBot;
 
 [SuppressMessage("GeneratedRegex", "SYSLIB1045:Convert to \'GeneratedRegexAttribute\'.")]
 public class Bot {
-    private readonly PluralFormatProvider pfp = new();
-
     private DiscordSocketClient? client;
 
     private SocketTextChannel? chatChannel;
@@ -44,7 +42,7 @@ public class Bot {
         Api = api;
         Logger = logger;
 
-        Config = BotConfig.Reload(this);
+        Config = BotConfig.Reload();
 
         commandHandler = new CommandHandler(this);
 
@@ -101,7 +99,7 @@ public class Bot {
         client.Log += ClientLogToConsole;
         client.SlashCommandExecuted += commandHandler.HandleSlashCommands;
 
-        commandHandler.Register(client);
+        await client.Rest.DeleteAllGlobalCommandsAsync();
 
         if (Config.ChatChannel != 0) {
             chatChannel = client.GetChannel(Config.ChatChannel) as SocketTextChannel;
@@ -109,6 +107,8 @@ public class Bot {
             SetupWebhooks();
 
             client.MessageReceived += DiscordMessageReceived;
+
+            commandHandler.Register(chatChannel!.Guild);
         }
 
         if (Config.ConsoleChannel != 0) {
@@ -158,7 +158,7 @@ public class Bot {
 
         string format = Config.Messages.PlayerJoined;
         if (format is { Length: > 0 } && joinmessage is { Length: > 0 }) {
-            SendMessageToDiscordChat(0x00FF00, embed: string.Format(format, joinmessage, player.GetClass(), player.PlayerName), thumbnail: player.GetAvatar());
+            SendMessageToDiscordChat(0x00FF00, embed: format.Format(joinmessage, player.GetClass(), player.PlayerName), thumbnail: player.GetAvatar());
         }
     }
 
@@ -167,14 +167,14 @@ public class Bot {
 
         string format = Config.Messages.PlayerLeft;
         if (format is { Length: > 0 } && kickmessage is { Length: > 0 }) {
-            SendMessageToDiscordChat(0xFF0000, embed: string.Format(format, kickmessage, player.PlayerName));
+            SendMessageToDiscordChat(0xFF0000, embed: format.Format(kickmessage, player.PlayerName));
         }
     }
 
     public void OnPlayerDeath(IServerPlayer player, string deathMessage) {
         string format = Config.Messages.PlayerDeath;
         if (format is { Length: > 0 }) {
-            SendMessageToDiscordChat(0x121212, embed: string.Format(format, deathMessage, player.PlayerName));
+            SendMessageToDiscordChat(0x121212, embed: format.Format(deathMessage, player.PlayerName));
         }
     }
 
@@ -190,14 +190,14 @@ public class Bot {
     public void OnCharacterSelection(IServerPlayer player) {
         string format = Config.Messages.PlayerChangedCharacter;
         if (format is { Length: > 0 }) {
-            SendMessageToDiscordChat(0xFFFF00, embed: string.Format(format, player.PlayerName, player.GetClass()), thumbnail: player.GetAvatar());
+            SendMessageToDiscordChat(0xFFFF00, embed: format.Format(player.PlayerName, player.GetClass()), thumbnail: player.GetAvatar());
         }
     }
 
     public void OnTemporalStormAnnounce(string message) {
         string format = Config.Messages.TemporalStorm;
         if (format is { Length: > 0 }) {
-            SendMessageToDiscordChat(0xFFFF00, embed: string.Format(format, message));
+            SendMessageToDiscordChat(0xFFFF00, embed: format.Format(message));
         }
     }
 
@@ -239,7 +239,7 @@ public class Bot {
                 return Task.CompletedTask;
             }
 
-            SendMessageToGameChat(string.Format(format, message.GetAuthor(), client.SanitizeMessage(message)));
+            SendMessageToGameChat(format.Format(message.GetAuthor(), client.SanitizeMessage(message)));
         }
         else if (consoleChannel?.Id == message.Channel.Id) {
             ((ServerMain)Api.World).ReceiveServerConsole($"/{message}");
@@ -333,7 +333,7 @@ public class Bot {
     private void UpdatePresence() {
         string format = Config.Messages.BotPresence;
         if (format.Length > 0) {
-            client?.SetGameAsync(string.Format(pfp, format, Api.World.AllOnlinePlayers.Length, Api.Server.Config.MaxClients));
+            client?.SetGameAsync(format.Format(Api.World.AllOnlinePlayers.Length, Api.Server.Config.MaxClients));
         }
     }
 

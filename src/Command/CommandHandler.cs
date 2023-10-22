@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
+using DiscordBot.Extensions;
 using Vintagestory.API.Util;
 
 namespace DiscordBot.Command;
@@ -15,23 +16,32 @@ public class CommandHandler {
     public CommandHandler(Bot bot) {
         Bot = bot;
 
-        Register(new PlayersCommand());
+        Register(new NextTempStormCommand(bot));
+        Register(new PlayersCommand(bot));
+        Register(new TimeCommand(bot));
     }
 
     private void Register(Command command) {
         commands.Add(command.Name.ToLower(), command);
     }
 
-    public void Register(DiscordSocketClient client) {
+    public void Register(SocketGuild guild) {
+        IReadOnlyCollection<SocketApplicationCommand> registeredCommands = guild.GetApplicationCommandsAsync().Result;
+
         foreach (Command command in commands.Values) {
-            SlashCommandBuilder builder = new SlashCommandBuilder().WithName(command.Name)
+            if (registeredCommands.Contains(command)) {
+                continue;
+            }
+
+            SlashCommandBuilder builder = new SlashCommandBuilder()
+                .WithName(command.Name)
                 .WithDescription(command.Description);
 
             foreach (Command.Option option in command.Options) {
                 builder.AddOption(option.Name, option.Type, option.Description, option.IsRequired);
             }
 
-            client.CreateGlobalApplicationCommandAsync(builder.Build());
+            guild.CreateApplicationCommandAsync(builder.Build());
         }
     }
 
@@ -42,9 +52,9 @@ public class CommandHandler {
         catch (Exception e) {
             Bot.Logger.Error(e);
             await command.RespondAsync(embed: new EmbedBuilder()
-                    .WithTitle("Error")
-                    .WithDescription("There was an error running that command!\n\nSee server console for more information.")
-                    .WithColor(Color.Red)
+                    .WithTitle(Bot.Config.Commands.Error.Title)
+                    .WithDescription(Bot.Config.Commands.Error.Description)
+                    .WithColor(Bot.Config.Commands.Error.Color)
                     .WithCurrentTimestamp()
                     .Build(),
                 ephemeral: true
