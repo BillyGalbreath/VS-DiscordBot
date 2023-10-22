@@ -213,7 +213,7 @@ public class BotConfig {
                 .WithQuotingNecessaryStrings()
                 .WithTypeConverter(new HexTypeConverter())
                 .WithNamingConvention(NullNamingConvention.Instance)
-                .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull | DefaultValuesHandling.OmitEmptyCollections)
+                .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
                 .Build().Serialize(config)
             , Encoding.UTF8);
         return config;
