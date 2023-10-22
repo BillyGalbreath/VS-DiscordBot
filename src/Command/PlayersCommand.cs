@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
@@ -33,8 +34,9 @@ public class PlayersCommand : Command {
 
         if (config.PlayersFields && list.Length > 0) {
             embed.WithFields(from player in list
-                let title = string.Format(ping ? config.PlayersFieldsTitleWithPing : config.PlayersFieldsTitle, player.PlayerName, player.Ping)
-                let value = string.Format(ping ? config.PlayersFieldsValueWithPing : config.PlayersFieldsValue, player.PlayerName, player.Ping)
+                let milli = TimeSpan.FromSeconds(player.Ping).Milliseconds
+                let title = string.Format(ping ? config.PlayersFieldsTitleWithPing : config.PlayersFieldsTitle, player.PlayerName, milli)
+                let value = string.Format(ping ? config.PlayersFieldsValueWithPing : config.PlayersFieldsValue, player.PlayerName, milli)
                 select new EmbedFieldBuilder()
                     .WithName(title is { Length: > 0 } ? title : "\u200B")
                     .WithValue(value is { Length: > 0 } ? value : "\u200B")
@@ -45,7 +47,7 @@ public class PlayersCommand : Command {
             embed.WithDescription(string.Format(config.PlayersList, list.Length > 0
                 ? list.Aggregate("", (current, player) => {
                     string format = ping ? config.PlayersListEntryWithPing : config.PlayersListEntry;
-                    string name = string.Format(format, player.PlayerName, player.Ping);
+                    string name = string.Format(format, player.PlayerName, TimeSpan.FromSeconds(player.Ping).Milliseconds);
                     return current + name;
                 })
                 : config.NoPlayersOnline)
