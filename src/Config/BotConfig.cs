@@ -71,7 +71,7 @@ public class BotConfig {
             public string Title = "Current Online Players ({0}/{1})";
 
             [YamlMember(Order = 2, Description = "Display the player list in embed fields instead of a basic list.")]
-            public bool PlayersFields = true;
+            public bool PlayersFields = false;
 
             [YamlMember(Order = 3, Description = "If more than one player is online, display the fields side-by-side.")]
             public bool PlayersFieldsInline = true;
