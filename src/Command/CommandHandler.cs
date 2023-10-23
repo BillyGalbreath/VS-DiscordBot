@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
+using DiscordBot.Config;
 using DiscordBot.Extensions;
 using Vintagestory.API.Util;
 
@@ -25,36 +26,53 @@ public class CommandHandler {
         commands.Add(command.Name.ToLower(), command);
     }
 
-    public void Register(SocketGuild guild) {
+    public async void RegisterAllCommands(SocketGuild guild) {
         IReadOnlyCollection<SocketApplicationCommand> registeredCommands = guild.GetApplicationCommandsAsync().Result;
 
         foreach (Command command in commands.Values) {
-            if (registeredCommands.Contains(command)) {
+            SocketApplicationCommand? registeredCommand = registeredCommands.Get(command);
+            if (registeredCommand != null) {
+                if (!command.IsEnabled()) {
+                    await registeredCommand.DeleteAsync();
+                }
+
+                continue;
+            }
+
+            if (!command.IsEnabled()) {
                 continue;
             }
 
             SlashCommandBuilder builder = new SlashCommandBuilder()
                 .WithName(command.Name)
-                .WithDescription(command.Description);
+                .WithDescription(command.GetHelp());
 
             foreach (Command.Option option in command.Options) {
                 builder.AddOption(option.Name, option.Type, option.Description, option.IsRequired);
             }
 
-            guild.CreateApplicationCommandAsync(builder.Build());
+            await guild.CreateApplicationCommandAsync(builder.Build());
         }
     }
 
     public async Task HandleSlashCommands(SocketSlashCommand command) {
         try {
-            await commands!.Get(command.Data.Name.ToLower())!.HandleCommand(Bot, command);
+            Command? registeredCommand = commands!.Get(command.Data.Name.ToLower());
+
+            if (registeredCommand?.IsEnabled() ?? false) {
+                await registeredCommand.HandleCommand(command);
+                return;
+            }
+
+            await command.DeleteOriginalResponseAsync();
         }
         catch (Exception e) {
             Bot.Logger.Error(e);
+            CommandError error = Bot.Config.Commands.Error;
             await command.RespondAsync(embed: new EmbedBuilder()
-                    .WithTitle(Bot.Config.Commands.Error.Title)
-                    .WithDescription(Bot.Config.Commands.Error.Description)
-                    .WithColor(Bot.Config.Commands.Error.Color)
+                    .WithTitle(error.Title)
+                    .WithDescription(error.Description)
+                    .WithColor(error.Color)
                     .WithCurrentTimestamp()
                     .Build(),
                 ephemeral: true

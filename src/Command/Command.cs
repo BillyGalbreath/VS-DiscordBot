@@ -6,17 +6,21 @@ using Discord.WebSocket;
 namespace DiscordBot.Command;
 
 public abstract class Command {
+    protected readonly Bot Bot;
+    
     public readonly string Name;
-    public readonly string Description;
-
     public readonly List<Option> Options = new();
 
-    protected Command(string name, string description) {
+    protected Command(Bot bot, string name) {
+        Bot = bot;
         Name = name;
-        Description = description;
     }
 
-    public abstract Task HandleCommand(Bot bot, SocketSlashCommand command);
+    public abstract bool IsEnabled();
+    
+    public abstract string GetHelp();
+
+    public abstract Task HandleCommand(SocketSlashCommand command);
 
     public class Option {
         public required string Name;

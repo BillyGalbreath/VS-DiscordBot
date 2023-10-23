@@ -8,17 +8,27 @@ using Vintagestory.GameContent;
 namespace DiscordBot.Command;
 
 public class NextTempStormCommand : Command {
-    public NextTempStormCommand(Bot bot) : base("nexttempstorm", bot.Config.Commands.NextTempStorm.Help) { }
+    private readonly ConfigNextTempStormCommand config;
 
-    public override Task HandleCommand(Bot bot, SocketSlashCommand command) {
-        BotConfig.ConfigCommands.ConfigNextTempStormCommand config = bot.Config.Commands.NextTempStorm;
+    public NextTempStormCommand(Bot bot) : base(bot, "nexttempstorm") {
+        config = bot.Config.Commands.NextTempStorm;
+    }
 
+    public override bool IsEnabled() {
+        return config.Enabled;
+    }
+
+    public override string GetHelp() {
+        return config.Help;
+    }
+
+    public override Task HandleCommand(SocketSlashCommand command) {
         EmbedBuilder embed = new();
 
-        TemporalStormRunTimeData data = bot.Api.ModLoader.GetModSystem<SystemTemporalStability>().StormData;
+        TemporalStormRunTimeData data = Bot.Api.ModLoader.GetModSystem<SystemTemporalStability>().StormData;
 
         if (data.nowStormActive) {
-            double days = data.stormActiveTotalDays - bot.Api.World.Calendar.TotalDays;
+            double days = data.stormActiveTotalDays - Bot.Api.World.Calendar.TotalDays;
             double hours = days * 24f;
             double minutes = (hours - (int)hours) * 60f;
 
@@ -35,7 +45,7 @@ public class NextTempStormCommand : Command {
             }
         }
         else {
-            double days = data.nextStormTotalDays - bot.Api.World.Calendar.TotalDays;
+            double days = data.nextStormTotalDays - Bot.Api.World.Calendar.TotalDays;
             double hours = (days - (int)days) * 24f;
             double minutes = (hours - (int)hours) * 60f;
 

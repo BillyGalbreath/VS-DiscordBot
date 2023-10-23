@@ -10,15 +10,25 @@ using Vintagestory.Common;
 namespace DiscordBot.Command;
 
 public class TimeCommand : Command {
-    public TimeCommand(Bot bot) : base("time", bot.Config.Commands.Time.Help) { }
+    private readonly ConfigTimeCommand config;
 
-    public override Task HandleCommand(Bot bot, SocketSlashCommand command) {
-        BotConfig.ConfigCommands.ConfigTimeCommand config = bot.Config.Commands.Time;
+    public TimeCommand(Bot bot) : base(bot, "time") {
+        config = bot.Config.Commands.Time;
+    }
 
+    public override bool IsEnabled() {
+        return config.Enabled;
+    }
+
+    public override string GetHelp() {
+        return config.Help;
+    }
+
+    public override Task HandleCommand(SocketSlashCommand command) {
         EmbedBuilder? embed = new EmbedBuilder()
             .WithColor(config.Color);
 
-        GameCalendar calendar = (GameCalendar)bot.Api.World.Calendar;
+        GameCalendar calendar = (GameCalendar)Bot.Api.World.Calendar;
 
         int day = calendar.DayOfMonth;
         int month = calendar.Month;

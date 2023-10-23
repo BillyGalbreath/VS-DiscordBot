@@ -10,7 +10,11 @@ using Vintagestory.API.Server;
 namespace DiscordBot.Command;
 
 public class PlayersCommand : Command {
-    public PlayersCommand(Bot bot) : base("players", bot.Config.Commands.Players.Help) {
+    private readonly ConfigPlayersCommand config;
+
+    public PlayersCommand(Bot bot) : base(bot, "players") {
+        config = bot.Config.Commands.Players;
+
         Options.Add(new Option {
             Name = "ping",
             Type = ApplicationCommandOptionType.Boolean,
@@ -19,17 +23,23 @@ public class PlayersCommand : Command {
         });
     }
 
-    public override async Task HandleCommand(Bot bot, SocketSlashCommand command) {
-        BotConfig.ConfigCommands.ConfigPlayersCommand config = bot.Config.Commands.Players;
+    public override bool IsEnabled() {
+        return config.Enabled;
+    }
 
+    public override string GetHelp() {
+        return config.Help;
+    }
+
+    public override async Task HandleCommand(SocketSlashCommand command) {
         bool ping = command.Data.Options.Get<bool?>("ping") ?? false;
-        var list = (IServerPlayer[])bot.Api.World.AllOnlinePlayers;
+        var list = (IServerPlayer[])Bot.Api.World.AllOnlinePlayers;
 
         EmbedBuilder? embed = new EmbedBuilder()
             .WithColor(config.Color);
 
         if (config.Title is { Length: > 0 }) {
-            embed.WithTitle(config.Title.Format(list.Length, bot.Api.Server.Config.MaxClients));
+            embed.WithTitle(config.Title.Format(list.Length, Bot.Api.Server.Config.MaxClients));
         }
 
         if (config.PlayersFields && list.Length > 0) {

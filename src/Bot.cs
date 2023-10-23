@@ -108,7 +108,7 @@ public class Bot {
 
             client.MessageReceived += DiscordMessageReceived;
 
-            commandHandler.Register(chatChannel!.Guild);
+            commandHandler.RegisterAllCommands(chatChannel!.Guild);
         }
 
         if (Config.ConsoleChannel != 0) {
