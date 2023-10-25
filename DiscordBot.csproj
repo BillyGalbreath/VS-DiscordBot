@@ -53,6 +53,12 @@
         <PackageReference Include="YamlDotNet" Version="13.7.1"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\SilentSave\SilentSave.csproj">
+            <Private>false</Private>
+        </ProjectReference>
+    </ItemGroup>
+
     <ItemGroup Condition="'$(Configuration)' == 'Release'">
         <None Include="LICENSE" CopyToOutputDirectory="PreserveNewest"/>
         <None Include="resources/**">

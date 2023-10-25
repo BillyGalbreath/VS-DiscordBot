@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
@@ -10,7 +9,7 @@ using DiscordBot.Command;
 using DiscordBot.Config;
 using DiscordBot.Extensions;
 using DiscordBot.Util;
-using HarmonyLib;
+using SilentSave;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
@@ -202,9 +201,7 @@ public class Bot {
     }
 
     private void OnLoggerEntryAdded(EnumLogType logType, string message, object[] args) {
-        if (!(bool)(AccessTools.TypeByName("SilentSave.SilentSaveMod")?
-                .GetField("allowLogger", BindingFlags.NonPublic | BindingFlags.Static)?
-                .GetValue(null) ?? true)) {
+        if (Api.ModLoader.GetModSystem<SilentSaveMod?>()?.SaveInProgress() ?? false) {
             return;
         }
 
