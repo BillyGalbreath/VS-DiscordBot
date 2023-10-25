@@ -242,7 +242,9 @@ public class Bot {
             SendMessageToGameChat(format.Format(message.GetAuthor(), client.SanitizeMessage(message)));
         }
         else if (consoleChannel?.Id == message.Channel.Id) {
-            ((ServerMain)Api.World).ReceiveServerConsole($"/{message}");
+            Api.Event.EnqueueMainThreadTask(() => {
+                ((ServerMain)Api.World).ReceiveServerConsole($"/{message}");
+            }, "discordbot.console.command");
         }
 
         return Task.CompletedTask;
