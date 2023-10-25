@@ -21,8 +21,11 @@ public class ServerMainPatches {
                 prefix: GetType().GetMethod("Prefix"));
         }
 
-        public static void Prefix(ConnectedClient client) {
-            ServerPlayer player = client.GetField<ServerPlayer>("Player")!;
+        public static void Prefix(ConnectedClient? client) {
+            ServerPlayer? player = client?.GetField<ServerPlayer>("Player");
+            if (player == null) {
+                return;
+            }
             CONNECTED_PLAYER_UUIDS.Add(player.PlayerUID);
             DiscordBotMod.Bot?.OnPlayerConnect(player, Lang.Get("{0} joined. Say hi :)", player.PlayerName));
         }
@@ -35,8 +38,8 @@ public class ServerMainPatches {
         }
 
         public static void Postfix(ConnectedClient? client, string? othersKickmessage) {
-            ServerPlayer player = client?.GetField<ServerPlayer>("Player")!;
-            if (CONNECTED_PLAYER_UUIDS.Remove(player.PlayerUID)) {
+            ServerPlayer? player = client?.GetField<ServerPlayer>("Player");
+            if (player != null && CONNECTED_PLAYER_UUIDS.Remove(player.PlayerUID)) {
                 DiscordBotMod.Bot?.OnPlayerDisconnect(player, othersKickmessage);
             }
         }
