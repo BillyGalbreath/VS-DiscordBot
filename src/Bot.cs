@@ -240,7 +240,8 @@ public class Bot {
         }
         else if (consoleChannel?.Id == message.Channel.Id) {
             Api.Event.EnqueueMainThreadTask(() => {
-                ((ServerMain)Api.World).ReceiveServerConsole($"/{message}");
+                ServerMain server = (ServerMain)Api.World;
+                server.ReceiveServerConsole($"/{message}");
             }, "discordbot.console.command");
         }
 
