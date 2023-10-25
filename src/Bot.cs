@@ -182,10 +182,19 @@ public class Bot {
             return; // ignore non-global chat
         }
 
+        // for reference on data value format:
         // string data = $"from: {player.Entity.EntityId},withoutPrefix:{message}";
         string message = data[(data.IndexOf("x:", StringComparison.Ordinal) + 2)..];
+        string toDiscord = message;
 
-        SendMessageToDiscordChat(text: message, username: player.PlayerName, avatar: player.GetAvatar());
+        if (Config.ParseUrlsInGameChat) {
+            toDiscord = message.ParseForDiscord();
+            string toGame = toDiscord.ParseForGame();
+            messageWithPrefix = messageWithPrefix.Replace(message, toGame);
+            data = $"from: {player.Entity.EntityId},withoutPrefix:{toGame}";
+        }
+
+        SendMessageToDiscordChat(text: toDiscord, username: player.PlayerName, avatar: player.GetAvatar());
     }
 
     public void OnCharacterSelection(IServerPlayer player) {

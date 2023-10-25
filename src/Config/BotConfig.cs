@@ -24,10 +24,13 @@ public class BotConfig {
     [YamlMember(Order = 2, Description = "Channel ID where you want console to log to.\nWARNING: Protect this channel, as any messages sent to it will be run\nas commands directly in the console!\nLeave as 0 if you dont want this feature enabled.")]
     public ulong ConsoleChannel { get; private set; }
 
-    [YamlMember(Order = 3, Description = "\nCustomizable messages.")]
+    [YamlMember(Order = 3, Description = "Parse urls in the game chat (anchor tags and markdown links become clickable)")]
+    public bool ParseUrlsInGameChat { get; private set; } = true;
+
+    [YamlMember(Order = 4, Description = "\nCustomizable messages.")]
     public ConfigMessages Messages = new();
 
-    [YamlMember(Order = 4, Description = "\nDiscord slash command options.")]
+    [YamlMember(Order = 5, Description = "\nDiscord slash command options.")]
     public ConfigCommands Commands = new();
 
     [YamlMember(Order = int.MaxValue, Description = "\n\nDo not edit this. For internal use only.\n\n(seriously, you can break your bot by editing this)")]
