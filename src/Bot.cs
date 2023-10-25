@@ -33,6 +33,8 @@ public class Bot {
     private int curWebhook = 1;
     private string? lastAuthor;
 
+    private string? inviteUrl;
+
     public ICoreServerAPI Api { get; }
     public BotConfig Config { get; }
     public ILogger Logger { get; }
@@ -50,6 +52,12 @@ public class Bot {
 
         api.Event.PlayerChat += OnPlayerChat;
         api.Server.Logger.EntryAdded += OnLoggerEntryAdded;
+
+        api.ChatCommands.Create("discord")
+            .RequiresPrivilege(Privilege.chat)
+            .HandleWith(_ =>
+                TextCommandResult.Success(string.Format(Config.Messages.DiscordCommandOutput, inviteUrl))
+            );
     }
 
     public async Task Connect() {
@@ -65,7 +73,7 @@ public class Bot {
                 //GatewayIntents.GuildMessageReactions |
                 GatewayIntents.GuildMessages |
                 //GatewayIntents.GuildVoiceStates |
-                //GatewayIntents.GuildInvites |
+                GatewayIntents.GuildInvites |
                 GatewayIntents.GuildWebhooks |
                 //GatewayIntents.GuildIntegrations |
                 //GatewayIntents.GuildEmojis |
@@ -108,6 +116,16 @@ public class Bot {
             client.MessageReceived += DiscordMessageReceived;
 
             commandHandler.RegisterAllCommands(chatChannel!.Guild);
+
+            if (Config.InGameInviteCode == "auto") {
+                IInviteMetadata invite = chatChannel.CreateInviteAsync(maxAge: null).Result;
+                Config.InGameInviteCode = invite.Code;
+                BotConfig.Write(Config);
+                inviteUrl = invite.Url;
+            }
+            else {
+                inviteUrl = $"https://discord.gg/{Config.InGameInviteCode}";
+            }
         }
 
         if (Config.ConsoleChannel != 0) {

@@ -27,10 +27,13 @@ public class BotConfig {
     [YamlMember(Order = 3, Description = "Parse urls in the game chat (anchor tags and markdown links become clickable)")]
     public bool ParseUrlsInGameChat { get; private set; } = true;
 
-    [YamlMember(Order = 4, Description = "\nCustomizable messages.")]
+    [YamlMember(Order = 4, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The invite code for the /discord command.\nSet it to\"auto\" for the bot to create a new invite.")]
+    public string InGameInviteCode { get; internal set; } = "auto";
+    
+    [YamlMember(Order = 5, Description = "\nCustomizable messages.")]
     public ConfigMessages Messages = new();
 
-    [YamlMember(Order = 5, Description = "\nDiscord slash command options.")]
+    [YamlMember(Order = 6, Description = "\nDiscord slash command options.")]
     public ConfigCommands Commands = new();
 
     [YamlMember(Order = int.MaxValue, Description = "\n\nDo not edit this. For internal use only.\n\n(seriously, you can break your bot by editing this)")]
@@ -61,7 +64,7 @@ public class BotConfig {
         }
     }
 
-    private static BotConfig Write(BotConfig config) {
+    internal static BotConfig Write(BotConfig config) {
         File.WriteAllText(FILENAME,
             new SerializerBuilder()
                 .WithQuotingNecessaryStrings()
@@ -117,6 +120,8 @@ public class BotConfig {
     }
 }
 
+[SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
+[SuppressMessage("ReSharper", "ConvertToConstant.Global")]
 public class ConfigMessages {
     [YamlMember(Order = 0, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The server is fully started.")]
     public string ServerStarted = ":white_check_mark: **Server has started**";
@@ -144,9 +149,13 @@ public class ConfigMessages {
 
     [YamlMember(Order = 8, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "A temporal storm message was sent in game.\n\"{0}\" is the message that was sent.")]
     public string TemporalStorm = "**:thunder_cloud_rain: {0}**";
+    
+    [YamlMember(Order = 9, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The output for the in-game /discord command.\n\"{0}\" is the invite url.")]
+    public string DiscordCommandOutput = "Join our discord at <a href=\"{0}\">{0}</a>!";
 }
 
 [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
+[SuppressMessage("ReSharper", "ConvertToConstant.Global")]
 public class ConfigCommands {
     [YamlMember(Order = 0, Description = "Options for the error message when a command fails to run.")]
     public CommandError Error = new();
