@@ -1,6 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Webhook;
@@ -177,13 +177,15 @@ public class Bot {
         }
     }
 
-    private void OnPlayerChat(IServerPlayer player, int channelId, ref string message, ref string data, BoolRef consumed) {
+    private void OnPlayerChat(IServerPlayer player, int channelId, ref string messageWithPrefix, ref string data, BoolRef consumed) {
         if (channelId != 0) {
             return; // ignore non-global chat
         }
 
-        SendMessageToDiscordChat(text: Regex.Replace(message, @"^((<.*>)?[^<>:]+:(</[^ ]*>)?) (.*)$", "$4"),
-            username: player.PlayerName, avatar: player.GetAvatar());
+        // string data = $"from: {player.Entity.EntityId},withoutPrefix:{message}";
+        string message = data[(data.IndexOf("x:", StringComparison.Ordinal) + 2)..];
+
+        SendMessageToDiscordChat(text: message, username: player.PlayerName, avatar: player.GetAvatar());
     }
 
     public void OnCharacterSelection(IServerPlayer player) {
