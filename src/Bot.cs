@@ -61,76 +61,81 @@ public class Bot {
     }
 
     public async Task Connect() {
-        client = new DiscordSocketClient(new DiscordSocketConfig {
-            GatewayIntents =
-                //GatewayIntents.AutoModerationActionExecution |
-                //GatewayIntents.AutoModerationConfiguration |
-                //GatewayIntents.GuildScheduledEvents |
-                //GatewayIntents.DirectMessageTyping |
-                //GatewayIntents.DirectMessageReactions |
-                //GatewayIntents.DirectMessages |
-                //GatewayIntents.GuildMessageTyping |
-                //GatewayIntents.GuildMessageReactions |
-                GatewayIntents.GuildMessages |
-                //GatewayIntents.GuildVoiceStates |
-                GatewayIntents.GuildInvites |
-                GatewayIntents.GuildWebhooks |
-                //GatewayIntents.GuildIntegrations |
-                //GatewayIntents.GuildEmojis |
-                //GatewayIntents.GuildBans |
-                GatewayIntents.Guilds |
-                GatewayIntents.MessageContent |
-                //GatewayIntents.GuildPresences |
-                GatewayIntents.GuildMembers
-        });
+        try {
+            client = new DiscordSocketClient(new DiscordSocketConfig {
+                GatewayIntents =
+                    //GatewayIntents.AutoModerationActionExecution |
+                    //GatewayIntents.AutoModerationConfiguration |
+                    //GatewayIntents.GuildScheduledEvents |
+                    //GatewayIntents.DirectMessageTyping |
+                    //GatewayIntents.DirectMessageReactions |
+                    //GatewayIntents.DirectMessages |
+                    //GatewayIntents.GuildMessageTyping |
+                    //GatewayIntents.GuildMessageReactions |
+                    GatewayIntents.GuildMessages |
+                    //GatewayIntents.GuildVoiceStates |
+                    GatewayIntents.GuildInvites |
+                    GatewayIntents.GuildWebhooks |
+                    //GatewayIntents.GuildIntegrations |
+                    //GatewayIntents.GuildEmojis |
+                    //GatewayIntents.GuildBans |
+                    GatewayIntents.Guilds |
+                    GatewayIntents.MessageContent |
+                    //GatewayIntents.GuildPresences |
+                    GatewayIntents.GuildMembers
+            });
 
-        await client.LoginAsync(TokenType.Bot, Config.Token);
-        await client.StartAsync();
+            await client.LoginAsync(TokenType.Bot, Config.Token);
+            await client.StartAsync();
 
-        var ready = new TaskCompletionSource<bool>();
-        client.Disconnected += _ => {
-            ready.TrySetResult(false);
-            return Task.CompletedTask;
-        };
+            var ready = new TaskCompletionSource<bool>();
+            client.Disconnected += _ => {
+                ready.TrySetResult(false);
+                return Task.CompletedTask;
+            };
 
-        client.Ready += () => {
-            ready.SetResult(true);
-            return Task.CompletedTask;
-        };
+            client.Ready += () => {
+                ready.SetResult(true);
+                return Task.CompletedTask;
+            };
 
-        if (!await ready.Task) {
-            client = null;
-            return;
-        }
-
-        client.Log += ClientLogToConsole;
-        client.SlashCommandExecuted += commandHandler.HandleSlashCommands;
-
-        await client.Rest.DeleteAllGlobalCommandsAsync();
-
-        if (Config.ChatChannel != 0) {
-            chatChannel = client.GetChannel(Config.ChatChannel) as SocketTextChannel;
-
-            SetupWebhooks();
-
-            client.MessageReceived += DiscordMessageReceived;
-
-            commandHandler.RegisterAllCommands(chatChannel!.Guild);
-
-            if (Config.InGameInviteCode == "auto") {
-                IInviteMetadata invite = chatChannel.CreateInviteAsync(maxAge: null).Result;
-                Config.InGameInviteCode = invite.Code;
-                BotConfig.Write(Config);
-                inviteUrl = invite.Url;
+            if (!await ready.Task) {
+                client = null;
+                return;
             }
-            else {
-                inviteUrl = $"https://discord.gg/{Config.InGameInviteCode}";
+
+            client.Log += ClientLogToConsole;
+            client.SlashCommandExecuted += commandHandler.HandleSlashCommands;
+
+            await client.Rest.DeleteAllGlobalCommandsAsync();
+
+            if (Config.ChatChannel != 0) {
+                chatChannel = client.GetChannel(Config.ChatChannel) as SocketTextChannel;
+
+                SetupWebhooks();
+
+                client.MessageReceived += DiscordMessageReceived;
+
+                commandHandler.RegisterAllCommands(chatChannel!.Guild);
+
+                if (Config.InGameInviteCode == "auto") {
+                    IInviteMetadata invite = chatChannel.CreateInviteAsync(maxAge: null).Result;
+                    Config.InGameInviteCode = invite.Code;
+                    BotConfig.Write(Config);
+                    inviteUrl = invite.Url;
+                }
+                else {
+                    inviteUrl = $"https://discord.gg/{Config.InGameInviteCode}";
+                }
+            }
+
+            if (Config.ConsoleChannel != 0) {
+                consoleChannel = client.GetChannel(Config.ConsoleChannel) as SocketTextChannel;
+                consoleQueue = new MessageQueue(this);
             }
         }
-
-        if (Config.ConsoleChannel != 0) {
-            consoleChannel = client.GetChannel(Config.ConsoleChannel) as SocketTextChannel;
-            consoleQueue = new MessageQueue(this);
+        catch (Exception e) {
+            Logger.Error(e);
         }
     }
 
