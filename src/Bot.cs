@@ -112,14 +112,16 @@ public class Bot {
             if (Config.ChatChannel != 0) {
                 chatChannel = client.GetChannel(Config.ChatChannel) as SocketTextChannel;
 
-                SetupWebhooks();
+                SocketTextChannel? channel = (SocketTextChannel?)(chatChannel is SocketThreadChannel thread ? thread.ParentChannel : chatChannel);
+
+                SetupWebhooks(channel);
 
                 client.MessageReceived += DiscordMessageReceived;
 
-                commandHandler.RegisterAllCommands(chatChannel!.Guild);
+                commandHandler.RegisterAllCommands(channel!.Guild);
 
                 if (Config.InGameInviteCode == "auto") {
-                    IInviteMetadata invite = chatChannel.CreateInviteAsync(maxAge: null).Result;
+                    IInviteMetadata invite = channel.CreateInviteAsync(maxAge: null).Result;
                     Config.InGameInviteCode = invite.Code;
                     BotConfig.Write(Config);
                     inviteUrl = invite.Url;
@@ -139,8 +141,7 @@ public class Bot {
         }
     }
 
-    private void SetupWebhooks() {
-        SocketTextChannel? channel = (SocketTextChannel?)(chatChannel is SocketThreadChannel thread ? thread.ParentChannel : chatChannel);
+    private void SetupWebhooks(SocketTextChannel? channel) {
         foreach (IWebhook webhook in channel?.GetWebhooksAsync().Result ?? Enumerable.Empty<IWebhook>()) {
             switch (webhook.Name) {
                 case "vs1":
