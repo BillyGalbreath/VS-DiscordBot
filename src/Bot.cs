@@ -8,8 +8,8 @@ using Discord.WebSocket;
 using DiscordBot.Command;
 using DiscordBot.Config;
 using DiscordBot.Extensions;
+using DiscordBot.Hook;
 using DiscordBot.Util;
-using SilentSave;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
@@ -236,7 +236,7 @@ public class Bot {
     }
 
     private void OnLoggerEntryAdded(EnumLogType logType, string message, object[] args) {
-        if (Api.ModLoader.GetModSystem<SilentSaveMod?>()?.SaveInProgress() ?? false) {
+        if (Api.SilentSaveInProgress()) {
             return;
         }
 
