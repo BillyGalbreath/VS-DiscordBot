@@ -74,7 +74,7 @@ public class Bot {
                     //GatewayIntents.GuildMessageReactions |
                     GatewayIntents.GuildMessages |
                     //GatewayIntents.GuildVoiceStates |
-                    GatewayIntents.GuildInvites |
+                    //GatewayIntents.GuildInvites |
                     GatewayIntents.GuildWebhooks |
                     //GatewayIntents.GuildIntegrations |
                     //GatewayIntents.GuildEmojis |
