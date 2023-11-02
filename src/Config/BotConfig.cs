@@ -65,6 +65,7 @@ public class BotConfig {
     }
 
     internal static BotConfig Write(BotConfig config) {
+        GamePaths.EnsurePathExists(GamePaths.ModConfig);
         File.WriteAllText(FILENAME,
             new SerializerBuilder()
                 .WithQuotingNecessaryStrings()
