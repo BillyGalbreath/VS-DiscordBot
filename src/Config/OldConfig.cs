@@ -1,5 +1,9 @@
-﻿namespace DiscordBot.Config;
+﻿using System.Diagnostics.CodeAnalysis;
 
+namespace DiscordBot.Config;
+
+[SuppressMessage("ReSharper", "ConvertToConstant.Global")]
+[SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
 public class OldConfig {
     public const string Filename = "discordbot.json";
 

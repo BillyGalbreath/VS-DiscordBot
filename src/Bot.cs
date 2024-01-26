@@ -41,6 +41,8 @@ public class Bot {
     public Bot(ILogger logger, ICoreServerAPI api) {
         Api = api;
         Logger = logger;
+        
+        Logger.Warning("BotCtor");
 
         Config = BotConfig.Reload();
 
@@ -60,6 +62,8 @@ public class Bot {
     }
 
     public async Task Connect() {
+        Logger.Warning("Connect");
+        
         try {
             _client = new DiscordSocketClient(new DiscordSocketConfig {
                 GatewayIntents =
@@ -139,6 +143,8 @@ public class Bot {
     }
 
     private void SetupWebhooks(SocketTextChannel? channel) {
+        Logger.Warning("SetupWebhooks");
+
         foreach (IWebhook webhook in channel?.GetWebhooksAsync().Result ?? Enumerable.Empty<IWebhook>()) {
             switch (webhook.Name) {
                 case "vs1":
@@ -155,6 +161,8 @@ public class Bot {
     }
 
     private void OnRunGame() {
+        Logger.Warning("OnRunGame");
+
         UpdatePresence();
 
         string format = Config.Messages.ServerStarted;
@@ -164,6 +172,8 @@ public class Bot {
     }
 
     private void OnShutdown() {
+        Logger.Warning("OnShutdown");
+
         string format = Config.Messages.ServerStopped;
         if (format.Length > 0) {
             SendMessageToDiscordChat(text: format, wait: true);
@@ -174,6 +184,8 @@ public class Bot {
     }
 
     public void OnPlayerConnect(IServerPlayer player, string? joinmessage = null) {
+        Logger.Warning("OnPlayerConnect");
+
         Api.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
 
         string format = Config.Messages.PlayerJoined;
@@ -183,6 +195,8 @@ public class Bot {
     }
 
     public void OnPlayerDisconnect(IServerPlayer player, string? kickmessage = null) {
+        Logger.Warning("OnPlayerDisconnect");
+
         Api.Event.RegisterCallback(_ => { UpdatePresence(); }, 1);
 
         string format = Config.Messages.PlayerLeft;
@@ -192,6 +206,8 @@ public class Bot {
     }
 
     public void OnPlayerDeath(IServerPlayer player, string deathMessage) {
+        Logger.Warning("OnPlayerDeath");
+
         string format = Config.Messages.PlayerDeath;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0x121212, embed: format.Format(deathMessage, player.PlayerName));
@@ -199,6 +215,8 @@ public class Bot {
     }
 
     private void OnPlayerChat(IServerPlayer player, int channelId, ref string messageWithPrefix, ref string data, BoolRef consumed) {
+        Logger.Warning("OnPlayerChat");
+
         if (channelId != 0) {
             return; // ignore non-global chat
         }
@@ -219,6 +237,8 @@ public class Bot {
     }
 
     public void OnCharacterSelection(IServerPlayer player) {
+        Logger.Warning("OnCharacterSelection");
+
         string format = Config.Messages.PlayerChangedCharacter;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0xFFFF00, embed: format.Format(player.PlayerName, player.GetClass()), thumbnail: player.GetAvatar());
@@ -226,6 +246,8 @@ public class Bot {
     }
 
     public void OnTemporalStormAnnounce(string message) {
+        Logger.Warning("OnTemporalStormAnnounce");
+
         string format = Config.Messages.TemporalStorm;
         if (format is { Length: > 0 }) {
             SendMessageToDiscordChat(0xFFFF00, embed: format.Format(message));
@@ -261,6 +283,8 @@ public class Bot {
         if (_client?.ShouldIgnore(message) ?? true) {
             return Task.CompletedTask;
         }
+        
+        Logger.Warning("OnDiscordMessageReceived");
 
         if (_chatChannel?.Id == message.Channel.Id) {
             string format = Config.Messages.PlayerChat;
@@ -299,6 +323,8 @@ public class Bot {
     }
 
     private void SendMessageToDiscordChat(uint color = 0x0, string text = "", string embed = "", string? username = null, string? avatar = null, string? thumbnail = null, bool wait = false) {
+        Logger.Warning("SendMessageToDiscordChat");
+
         if (text.Length <= 0 && embed.Length <= 0) {
             return;
         }
@@ -355,12 +381,14 @@ public class Bot {
     }
 
     private void SendMessageToGameChat(string message) {
+        Logger.Warning("SendMessageToGameChat");
         if (message.Length > 0) {
             Api.SendMessageToGroup(GlobalConstants.GeneralChatGroup, message, EnumChatType.OthersMessage);
         }
     }
 
     private void UpdatePresence() {
+        Logger.Warning("UpdatePresence");
         string format = Config.Messages.BotPresence;
         if (format.Length > 0) {
             _client?.SetGameAsync(format.Format(Api.World.AllOnlinePlayers.Length, Api.Server.Config.MaxClients));

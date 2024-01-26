@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Discord.WebSocket;
@@ -18,6 +19,7 @@ public static partial class DiscordExtensions {
     [GeneratedRegex(@"<:(.+):\d+>")]
     private static partial Regex EmojiTagRegex();
 
+    [SuppressMessage("ReSharper", "UseRawString")]
     [GeneratedRegex(@"<a(?:.*) href=""((?:(\w+)(?::\/\/)+)?[\w:\/\\\+-.?=]+)""(?:.*)>([^<]+)<\/a>")]
     private static partial Regex AnchorTagRegex();
 

@@ -14,15 +14,16 @@ using Vintagestory.GameContent;
 
 namespace DiscordBot;
 
+// ReSharper disable All
 public class ClientMod {
     private static readonly Dictionary<SkinnablePart, SkinnablePartVariant> Parts = new();
 
-    private static GuiDialogCreateCharacter? _dialog;
-    private static bool _findNextSkin;
-    private static bool _takeScreenshot;
-
     private readonly ICoreClientAPI _capi;
     private readonly ClientPlatformAbstract _platform;
+    
+    private GuiDialogCreateCharacter? _dialog;
+    private bool _findNextSkin;
+    private bool _takeScreenshot;
 
     private SKBitmap? _bitmap, _rotated, _cropped;
 

@@ -112,10 +112,12 @@ public class BotConfig {
         CheckForOldConfig();
 
         // badly named entry. renamed in config version 1
-        if (_previousVersion < 1 && Commands.ConfigPlayers != null) {
-            Commands.Players = Commands.ConfigPlayers;
-            Commands.ConfigPlayers = null;
+        if (_previousVersion >= 1 || Commands.ConfigPlayers == null) {
+            return;
         }
+
+        Commands.Players = Commands.ConfigPlayers;
+        Commands.ConfigPlayers = null;
     }
 }
 

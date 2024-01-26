@@ -33,7 +33,7 @@ public class PlayersCommand : Command {
 
     public override async Task HandleCommand(SocketSlashCommand command) {
         bool ping = command.Data.Options.Get<bool?>("ping") ?? false;
-        var list = (IServerPlayer[])Bot.Api.World.AllOnlinePlayers;
+        IServerPlayer[]? list = (IServerPlayer[])Bot.Api.World.AllOnlinePlayers;
 
         EmbedBuilder? embed = new EmbedBuilder()
             .WithColor(_config.Color);
