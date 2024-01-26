@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using HarmonyLib;
 using Vintagestory.API.Common;
@@ -22,7 +23,11 @@ public class CharacterSystemPatches {
                 postfix: GetType().GetMethod("Postfix"));
         }
 
+        [SuppressMessage("ReSharper", "UnusedMember.Local")]
         public static void Prefix(IServerPlayer fromPlayer, CharacterSelectionPacket p) {
+            // remove from cache to prevent abuse
+            CharacterSelectCache.Remove(fromPlayer.PlayerUID);
+
             bool didSelectBefore = SerializerUtil.Deserialize(fromPlayer.GetModdata("createCharacter"), false);
             if (didSelectBefore && fromPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative) {
                 return;
@@ -33,6 +38,7 @@ public class CharacterSystemPatches {
             }
         }
 
+        [SuppressMessage("ReSharper", "UnusedMember.Local")]
         public static void Postfix(IServerPlayer fromPlayer) {
             if (CharacterSelectCache.Remove(fromPlayer.PlayerUID)) {
                 DiscordBotMod.Bot?.OnCharacterSelection(fromPlayer);
