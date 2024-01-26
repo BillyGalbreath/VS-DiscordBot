@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Discord;
@@ -10,6 +11,8 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace DiscordBot.Config;
 
+[SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class BotConfig {
     [YamlMember(Order = 0, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "Your bot's secret token. Go to https://discord.com/developers/applications to set up your bot.\nAt a minimum bot requires all three privileged intents (https://discord.com/developers/docs/topics/gateway#privileged-intents),\nand bot permissions to manage webhooks (https://discord.com/developers/docs/getting-started#adding-scopes-and-bot-permissions)")]
     public string Token { get; private set; } = "your-bot-token";
@@ -17,7 +20,7 @@ public class BotConfig {
     [YamlMember(Order = 1, Description = "Channel ID where you want player chat and events to go to/from.")]
     public ulong ChatChannel { get; private set; }
 
-    [YamlMember(Order = 2, Description = "Channel ID where you want console to log to.\nWARNING: Protect this channel, as any messages sent to it will be run\nas commands directly in the console!\nLeave as 0 if you dont want this feature enabled.")]
+    [YamlMember(Order = 2, Description = "Channel ID where you want console to log to.\n!!! WARNING !!!\nProtect this channel, as any messages sent to it\nwill be run as commands directly in the console!\nLeave as 0 if you dont want this feature enabled.")]
     public ulong ConsoleChannel { get; private set; }
 
     [YamlMember(Order = 3, Description = "Parse urls in the game chat (anchor tags and markdown links become clickable)")]
@@ -116,6 +119,8 @@ public class BotConfig {
     }
 }
 
+[SuppressMessage("ReSharper", "ConvertToConstant.Global")]
+[SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
 public class ConfigMessages {
     [YamlMember(Order = 0, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The server is fully started.")]
     public string ServerStarted = ":white_check_mark: **Server has started**";
@@ -148,6 +153,7 @@ public class ConfigMessages {
     public string DiscordCommandOutput = "Join our discord at <a href=\"{0}\">{0}</a>!";
 }
 
+[SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
 public class ConfigCommands {
     [YamlMember(Order = 0, Description = "Options for the error message when a command fails to run.")]
     public CommandError Error = new();
@@ -165,6 +171,8 @@ public class ConfigCommands {
     public ConfigTimeCommand Time = new();
 }
 
+[SuppressMessage("ReSharper", "ConvertToConstant.Global")]
+[SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
 public class CommandError {
     [YamlMember(Order = 0, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The color of the left strip of the embed.\nSupports any six-digit color hex value with leading \"#\".")]
     public Color Color = 0x008080;
@@ -176,6 +184,8 @@ public class CommandError {
     public string Description = "There was an error running that command!\n\nSee server console for more information.";
 }
 
+[SuppressMessage("ReSharper", "ConvertToConstant.Global")]
+[SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
 public class ConfigNextTempStormCommand {
     [YamlMember(Order = 0, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The help text describing the command.")]
     public string Help = "Tells you the amount of days until the next storm";
@@ -205,6 +215,8 @@ public class ConfigNextTempStormCommand {
     public bool Ephemeral = true;
 }
 
+[SuppressMessage("ReSharper", "ConvertToConstant.Global")]
+[SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
 public class ConfigPlayersCommand {
     [YamlMember(Order = 0, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The help text describing the command.")]
     public string Help = "List current online players";
@@ -258,6 +270,8 @@ public class ConfigPlayersCommand {
     public bool Ephemeral = true;
 }
 
+[SuppressMessage("ReSharper", "ConvertToConstant.Global")]
+[SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
 public class ConfigTimeCommand {
     [YamlMember(Order = 0, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The help text describing the command.")]
     public string Help = "Check current in-game date and time";

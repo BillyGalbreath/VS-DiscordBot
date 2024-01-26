@@ -32,7 +32,7 @@ public static partial class DiscordExtensions {
     }
 
     public static bool ShouldIgnore(this DiscordSocketClient client, SocketMessage message) {
-        return client.CurrentUser.Id == message.Author.Id || message.Author.IsBot || message.Author.IsWebhook || message.Content == "";
+        return client.CurrentUser.Id == message.Author.Id || message.Author.IsBot || message.Author.IsWebhook || string.IsNullOrEmpty(message.Content);
     }
 
     public static T? Get<T>(this IEnumerable<SocketSlashCommandDataOption> collection, string name) {
