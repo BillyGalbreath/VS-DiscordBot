@@ -8,18 +8,18 @@ using Vintagestory.GameContent;
 namespace DiscordBot.Command;
 
 public class NextTempStormCommand : Command {
-    private readonly ConfigNextTempStormCommand config;
+    private readonly ConfigNextTempStormCommand _config;
 
     public NextTempStormCommand(Bot bot) : base(bot, "nexttempstorm") {
-        config = bot.Config.Commands.NextTempStorm;
+        _config = bot.Config.Commands.NextTempStorm;
     }
 
     public override bool IsEnabled() {
-        return config.Enabled;
+        return _config.Enabled;
     }
 
     public override string GetHelp() {
-        return config.Help;
+        return _config.Help;
     }
 
     public override Task HandleCommand(SocketSlashCommand command) {
@@ -32,36 +32,35 @@ public class NextTempStormCommand : Command {
             double hours = days * 24f;
             double minutes = (hours - (int)hours) * 60f;
 
-            if (config.TitleActive is { Length: > 0 }) {
+            if (_config.TitleActive is { Length: > 0 }) {
                 embed
-                    .WithColor(config.Color)
-                    .WithTitle(config.TitleActive.Format(data.nextStormStrength, (int)hours, (int)minutes));
+                    .WithColor(_config.Color)
+                    .WithTitle(_config.TitleActive.Format(data.nextStormStrength, (int)hours, (int)minutes));
             }
 
-            if (config.DescriptionActive is { Length: > 0 }) {
+            if (_config.DescriptionActive is { Length: > 0 }) {
                 embed
-                    .WithColor(config.Color)
-                    .WithDescription(config.DescriptionActive.Format(data.nextStormStrength, (int)hours, (int)minutes));
+                    .WithColor(_config.Color)
+                    .WithDescription(_config.DescriptionActive.Format(data.nextStormStrength, (int)hours, (int)minutes));
             }
-        }
-        else {
+        } else {
             double days = data.nextStormTotalDays - Bot.Api.World.Calendar.TotalDays;
             double hours = (days - (int)days) * 24f;
             double minutes = (hours - (int)hours) * 60f;
 
-            if (config.Title is { Length: > 0 }) {
+            if (_config.Title is { Length: > 0 }) {
                 embed
-                    .WithColor(config.ColorActive)
-                    .WithTitle(config.Title.Format((int)days, (int)hours, (int)minutes));
+                    .WithColor(_config.ColorActive)
+                    .WithTitle(_config.Title.Format((int)days, (int)hours, (int)minutes));
             }
 
-            if (config.Description is { Length: > 0 }) {
+            if (_config.Description is { Length: > 0 }) {
                 embed
-                    .WithColor(config.ColorActive)
-                    .WithDescription(config.Description.Format((int)days, (int)hours, (int)minutes));
+                    .WithColor(_config.ColorActive)
+                    .WithDescription(_config.Description.Format((int)days, (int)hours, (int)minutes));
             }
         }
 
-        return command.RespondAsync(embed: embed.Build(), ephemeral: config.Ephemeral);
+        return command.RespondAsync(embed: embed.Build(), ephemeral: _config.Ephemeral);
     }
 }

@@ -1,20 +1,31 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Discord.WebSocket;
 
 namespace DiscordBot.Extensions;
 
-[SuppressMessage("GeneratedRegex", "SYSLIB1045:Convert to \'GeneratedRegexAttribute\'.")]
-public static class DiscordExtensions {
-    private static readonly Regex USER_NAME = new("<@!?([0-9]+)>");
-    private static readonly Regex ROLE_NAME = new("<@&([0-9]+)>");
-    private static readonly Regex CHANNEL_NAME = new("<#([0-9]+)>");
-    private static readonly Regex EMOJI_TAG = new(@"<:(.+):\d+>");
-    private static readonly Regex ANCHOR_TAG = new("""<a(?:.*) href="((?:(\w+)(?::\/\/)+)?[\w:\/\\\+-.?=]+)"(?:.*)>([^<]+)<\/a>""");
-    private static readonly Regex ANCHOR_MARKDOWN = new(@"\[(.+)\]\(http(?:s)*:\/\/(.+)\)");
-    private static readonly Regex PLAIN_URL = new(@"(?<![""(])(?:<?)(http(?:s)*:\/\/(?:\w(?:[\w.\/?=#-]+)+))(?:>?)");
+public static partial class DiscordExtensions {
+    [GeneratedRegex("<@!?([0-9]+)>")]
+    private static partial Regex UserNameRegex();
+
+    [GeneratedRegex("<@&([0-9]+)>")]
+    private static partial Regex RoleNameRegex();
+
+    [GeneratedRegex("<#([0-9]+)>")]
+    private static partial Regex ChannelNameRegex();
+
+    [GeneratedRegex(@"<:(.+):\d+>")]
+    private static partial Regex EmojiTagRegex();
+
+    [GeneratedRegex(@"<a(?:.*) href=""((?:(\w+)(?::\/\/)+)?[\w:\/\\\+-.?=]+)""(?:.*)>([^<]+)<\/a>")]
+    private static partial Regex AnchorTagRegex();
+
+    [GeneratedRegex(@"\[(.+)\]\(http(?:s)*:\/\/(.+)\)")]
+    private static partial Regex AnchorMarkdownRegex();
+
+    [GeneratedRegex(@"(?<![""(])(?:<?)(http(?:s)*:\/\/(?:\w(?:[\w.\/?=#-]+)+))(?:>?)")]
+    private static partial Regex PlainUrlRegex();
 
     public static string GetAuthor(this SocketMessage message) {
         return message.Author is SocketGuildUser guildUser ? guildUser.DisplayName : message.Author.GlobalName ?? message.Author.Username;
@@ -34,8 +45,8 @@ public static class DiscordExtensions {
 
     public static string ParseForDiscord(this string message) {
         string result = message.Replace("&lt;", "<").Replace("&gt;", ">");
-        
-        foreach (Match match in ANCHOR_TAG.Matches(result)) {
+
+        foreach (Match match in AnchorTagRegex().Matches(result)) {
             string url = match.Groups[1].Value;
             string protocol = match.Groups[2].Value;
             string text = match.Groups[3].Value;
@@ -51,22 +62,22 @@ public static class DiscordExtensions {
 
         return result;
     }
-    
+
     public static string ParseForGame(this string message) {
         string result = message.Replace("<", "&lt;").Replace(">", "&gt;");
 
-        foreach (Match match in ANCHOR_MARKDOWN.Matches(result)) {
+        foreach (Match match in AnchorMarkdownRegex().Matches(result)) {
             string text = match.Groups[1].Value;
             string url = match.Groups[2].Value;
             result = result.Replace(match.Value, $"""<a href="{url}">{text}</a>""");
         }
 
-        foreach (Match match in PLAIN_URL.Matches(result)) {
+        foreach (Match match in PlainUrlRegex().Matches(result)) {
             string url = match.Groups[1].Value;
             result = result.Replace(match.Value, $"""<a href="{url}">{url}</a>""");
         }
 
-        foreach (Match match in EMOJI_TAG.Matches(result)) {
+        foreach (Match match in EmojiTagRegex().Matches(result)) {
             result = result.Replace(match.Value, $":{match.Groups[1].Value}:");
         }
 
@@ -76,8 +87,8 @@ public static class DiscordExtensions {
     public static string SanitizeMessage(this DiscordSocketClient client, SocketMessage socketMessage) {
         string message = socketMessage.Content;
         ulong? guildId = (socketMessage.Channel as SocketTextChannel)?.Guild.Id;
-        
-        foreach (Match match in USER_NAME.Matches(message)) {
+
+        foreach (Match match in UserNameRegex().Matches(message)) {
             foreach (SocketUser mUser in socketMessage.MentionedUsers) {
                 if (mUser.Id.ToString() != match.Groups[1].Value) {
                     continue;
@@ -94,7 +105,7 @@ public static class DiscordExtensions {
             }
         }
 
-        foreach (Match match in ROLE_NAME.Matches(message)) {
+        foreach (Match match in RoleNameRegex().Matches(message)) {
             foreach (SocketRole mRole in socketMessage.MentionedRoles) {
                 if (mRole.Id.ToString() != match.Groups[1].Value) {
                     continue;
@@ -105,7 +116,7 @@ public static class DiscordExtensions {
             }
         }
 
-        foreach (Match match in CHANNEL_NAME.Matches(message)) {
+        foreach (Match match in ChannelNameRegex().Matches(message)) {
             foreach (SocketChannel channel in socketMessage.MentionedChannels) {
                 if (channel.Id.ToString() != match.Groups[1].Value) {
                     continue;

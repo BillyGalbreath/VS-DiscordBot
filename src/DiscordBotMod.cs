@@ -6,7 +6,8 @@ namespace DiscordBot;
 
 public class DiscordBotMod : ModSystem {
     public static Bot? Bot { get; private set; }
-    private HarmonyPatches? patches;
+
+    private HarmonyPatches? _patches;
 
     public override bool ShouldLoad(EnumAppSide side) {
         return side.IsServer();
@@ -14,14 +15,14 @@ public class DiscordBotMod : ModSystem {
 
     public override void StartServerSide(ICoreServerAPI api) {
         Bot = new Bot(Mod.Logger, api);
-        patches = new HarmonyPatches(this);
+        _patches = new HarmonyPatches(this);
 
         Bot.Connect().Wait();
     }
 
     public override void Dispose() {
-        patches?.Dispose();
-        patches = null;
+        _patches?.Dispose();
+        _patches = null;
 
         Bot?.Dispose();
         Bot = null;

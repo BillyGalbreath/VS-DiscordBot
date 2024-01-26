@@ -10,23 +10,23 @@ using Vintagestory.Common;
 namespace DiscordBot.Command;
 
 public class TimeCommand : Command {
-    private readonly ConfigTimeCommand config;
+    private readonly ConfigTimeCommand _config;
 
     public TimeCommand(Bot bot) : base(bot, "time") {
-        config = bot.Config.Commands.Time;
+        _config = bot.Config.Commands.Time;
     }
 
     public override bool IsEnabled() {
-        return config.Enabled;
+        return _config.Enabled;
     }
 
     public override string GetHelp() {
-        return config.Help;
+        return _config.Help;
     }
 
     public override Task HandleCommand(SocketSlashCommand command) {
         EmbedBuilder? embed = new EmbedBuilder()
-            .WithColor(config.Color);
+            .WithColor(_config.Color);
 
         GameCalendar calendar = (GameCalendar)Bot.Api.World.Calendar;
 
@@ -37,14 +37,14 @@ public class TimeCommand : Command {
         int hour = (int)calendar.HourOfDay;
         int minute = (int)((calendar.HourOfDay - hour) * 60f);
 
-        if (config.Title is { Length: > 0 }) {
-            embed.WithTitle(config.Title.Format(day, month, monthName, year, hour, minute));
+        if (_config.Title is { Length: > 0 }) {
+            embed.WithTitle(_config.Title.Format(day, month, monthName, year, hour, minute));
         }
 
-        if (config.Description is { Length: > 0 }) {
-            embed.WithDescription(config.Description.Format(day, month, monthName, year, hour, minute));
+        if (_config.Description is { Length: > 0 }) {
+            embed.WithDescription(_config.Description.Format(day, month, monthName, year, hour, minute));
         }
 
-        return command.RespondAsync(embed: embed.Build(), ephemeral: config.Ephemeral);
+        return command.RespondAsync(embed: embed.Build(), ephemeral: _config.Ephemeral);
     }
 }

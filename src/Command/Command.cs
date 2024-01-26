@@ -7,7 +7,7 @@ namespace DiscordBot.Command;
 
 public abstract class Command {
     protected readonly Bot Bot;
-    
+
     public readonly string Name;
     public readonly List<Option> Options = new();
 
@@ -17,7 +17,7 @@ public abstract class Command {
     }
 
     public abstract bool IsEnabled();
-    
+
     public abstract string GetHelp();
 
     public abstract Task HandleCommand(SocketSlashCommand command);

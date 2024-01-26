@@ -10,7 +10,7 @@ using Vintagestory.API.Util;
 namespace DiscordBot.Command;
 
 public class CommandHandler {
-    private readonly Dictionary<string, Command> commands = new();
+    private readonly Dictionary<string, Command> _commands = new();
 
     private Bot Bot { get; }
 
@@ -23,13 +23,13 @@ public class CommandHandler {
     }
 
     private void Register(Command command) {
-        commands.Add(command.Name.ToLower(), command);
+        _commands.Add(command.Name.ToLower(), command);
     }
 
     public async void RegisterAllCommands(SocketGuild guild) {
         IReadOnlyCollection<SocketApplicationCommand> registeredCommands = guild.GetApplicationCommandsAsync().Result;
 
-        foreach (Command command in commands.Values) {
+        foreach (Command command in _commands.Values) {
             SocketApplicationCommand? registeredCommand = registeredCommands.Get(command);
             if (registeredCommand != null) {
                 if (!command.IsEnabled()) {
@@ -57,7 +57,7 @@ public class CommandHandler {
 
     public async Task HandleSlashCommands(SocketSlashCommand command) {
         try {
-            Command? registeredCommand = commands!.Get(command.Data.Name.ToLower());
+            Command? registeredCommand = _commands!.Get(command.Data.Name.ToLower());
 
             if (registeredCommand?.IsEnabled() ?? false) {
                 await registeredCommand.HandleCommand(command);
@@ -65,8 +65,7 @@ public class CommandHandler {
             }
 
             await command.DeleteOriginalResponseAsync();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Bot.Logger.Error(e);
             CommandError error = Bot.Config.Commands.Error;
             await command.RespondAsync(embed: new EmbedBuilder()

@@ -8,7 +8,7 @@ using Vintagestory.Server;
 namespace DiscordBot.Patches;
 
 public class ServerMainPatches {
-    protected internal static readonly List<string> CONNECTED_PLAYER_UUIDS = new();
+    protected internal static readonly List<string> ConnectedPlayerUuids = new();
 
     protected internal ServerMainPatches(Harmony harmony) {
         _ = new HandleClientLoadedPatch(harmony);
@@ -26,7 +26,8 @@ public class ServerMainPatches {
             if (player == null) {
                 return;
             }
-            CONNECTED_PLAYER_UUIDS.Add(player.PlayerUID);
+
+            ConnectedPlayerUuids.Add(player.PlayerUID);
             DiscordBotMod.Bot?.OnPlayerConnect(player, Lang.Get("{0} joined. Say hi :)", player.PlayerName));
         }
     }
@@ -39,7 +40,7 @@ public class ServerMainPatches {
 
         public static void Postfix(ConnectedClient? client, string? othersKickmessage) {
             ServerPlayer? player = client?.GetField<ServerPlayer>("Player");
-            if (player != null && CONNECTED_PLAYER_UUIDS.Remove(player.PlayerUID)) {
+            if (player != null && ConnectedPlayerUuids.Remove(player.PlayerUID)) {
                 DiscordBotMod.Bot?.OnPlayerDisconnect(player, othersKickmessage);
             }
         }

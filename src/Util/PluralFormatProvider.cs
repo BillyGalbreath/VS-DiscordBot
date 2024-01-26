@@ -13,8 +13,7 @@ public class PluralFormatProvider : IFormatProvider, ICustomFormatter {
         }
 
         if (!format.Contains(';')) {
-            // ReSharper disable FormatStringProblem
-            return string.Format("{0:" + format + "}", arg);
+            return string.Format($"{{0:{format}}}", arg);
         }
 
         int i = (int)(arg ?? 0) == 1 ? 0 : 1;

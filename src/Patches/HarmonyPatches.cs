@@ -4,25 +4,25 @@ using Vintagestory.API.Common;
 namespace DiscordBot.Patches;
 
 public class HarmonyPatches {
-    private readonly string modId;
+    private readonly string _modId;
 
-    private Harmony? harmony;
+    private Harmony? _harmony;
 
     public HarmonyPatches(ModSystem mod) {
-        modId = mod.Mod.Info.ModID;
-        harmony = new Harmony(modId);
+        _modId = mod.Mod.Info.ModID;
+        _harmony = new Harmony(_modId);
 
-        _ = new ServerMainPatches(harmony);
-        _ = new ServerSystemEntitySimulationPatches(harmony);
-        _ = new SystemTemporalStabilityPatches(harmony);
-        _ = new ServerCoreApiPatches(harmony);
-        _ = new CharacterSystemPatches(harmony);
+        _ = new ServerMainPatches(_harmony);
+        _ = new ServerSystemEntitySimulationPatches(_harmony);
+        _ = new SystemTemporalStabilityPatches(_harmony);
+        _ = new ServerCoreApiPatches(_harmony);
+        _ = new CharacterSystemPatches(_harmony);
     }
 
     public void Dispose() {
-        harmony?.UnpatchAll(modId);
-        harmony = null;
+        _harmony?.UnpatchAll(_modId);
+        _harmony = null;
 
-        ServerMainPatches.CONNECTED_PLAYER_UUIDS.Clear();
+        ServerMainPatches.ConnectedPlayerUuids.Clear();
     }
 }

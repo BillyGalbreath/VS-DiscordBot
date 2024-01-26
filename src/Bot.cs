@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Rest;
 using Discord.Webhook;
 using Discord.WebSocket;
 using DiscordBot.Command;
@@ -18,22 +18,21 @@ using Vintagestory.Server;
 
 namespace DiscordBot;
 
-[SuppressMessage("GeneratedRegex", "SYSLIB1045:Convert to \'GeneratedRegexAttribute\'.")]
 public class Bot {
-    private DiscordSocketClient? client;
+    private DiscordSocketClient? _client;
 
-    private SocketTextChannel? chatChannel;
-    private SocketTextChannel? consoleChannel;
+    private SocketTextChannel? _chatChannel;
+    private SocketTextChannel? _consoleChannel;
 
-    private MessageQueue? consoleQueue;
+    private MessageQueue? _consoleQueue;
 
-    private readonly CommandHandler commandHandler;
+    private readonly CommandHandler _commandHandler;
 
-    private readonly DiscordWebhookClient?[] webhooks = new DiscordWebhookClient?[2];
-    private int curWebhook = 1;
-    private string? lastAuthor;
+    private readonly DiscordWebhookClient?[] _webhooks = new DiscordWebhookClient?[2];
+    private int _curWebhook = 1;
+    private string? _lastAuthor;
 
-    private string? inviteUrl;
+    private string? _inviteUrl;
 
     public ICoreServerAPI Api { get; }
     public BotConfig Config { get; }
@@ -45,7 +44,7 @@ public class Bot {
 
         Config = BotConfig.Reload();
 
-        commandHandler = new CommandHandler(this);
+        _commandHandler = new CommandHandler(this);
 
         api.Event.ServerRunPhase(EnumServerRunPhase.RunGame, OnRunGame);
         api.Event.ServerRunPhase(EnumServerRunPhase.Shutdown, OnShutdown);
@@ -56,13 +55,13 @@ public class Bot {
         api.ChatCommands.Create("discord")
             .RequiresPrivilege(Privilege.chat)
             .HandleWith(_ =>
-                TextCommandResult.Success(string.Format(Config.Messages.DiscordCommandOutput, inviteUrl))
+                TextCommandResult.Success(string.Format(Config.Messages.DiscordCommandOutput, _inviteUrl))
             );
     }
 
     public async Task Connect() {
         try {
-            client = new DiscordSocketClient(new DiscordSocketConfig {
+            _client = new DiscordSocketClient(new DiscordSocketConfig {
                 GatewayIntents =
                     //GatewayIntents.AutoModerationActionExecution |
                     //GatewayIntents.AutoModerationConfiguration |
@@ -85,58 +84,56 @@ public class Bot {
                     GatewayIntents.GuildMembers
             });
 
-            await client.LoginAsync(TokenType.Bot, Config.Token);
-            await client.StartAsync();
+            await _client.LoginAsync(TokenType.Bot, Config.Token);
+            await _client.StartAsync();
 
-            var ready = new TaskCompletionSource<bool>();
-            client.Disconnected += _ => {
+            TaskCompletionSource<bool> ready = new();
+            _client.Disconnected += _ => {
                 ready.TrySetResult(false);
                 return Task.CompletedTask;
             };
 
-            client.Ready += () => {
+            _client.Ready += () => {
                 ready.SetResult(true);
                 return Task.CompletedTask;
             };
 
             if (!await ready.Task) {
-                client = null;
+                _client = null;
                 return;
             }
 
-            client.Log += ClientLogToConsole;
-            client.SlashCommandExecuted += commandHandler.HandleSlashCommands;
+            _client.Log += ClientLogToConsole;
+            _client.SlashCommandExecuted += _commandHandler.HandleSlashCommands;
 
-            await client.Rest.DeleteAllGlobalCommandsAsync();
+            await _client.Rest.DeleteAllGlobalCommandsAsync();
 
             if (Config.ChatChannel != 0) {
-                chatChannel = client.GetChannel(Config.ChatChannel) as SocketTextChannel;
+                _chatChannel = _client.GetChannel(Config.ChatChannel) as SocketTextChannel;
 
-                SocketTextChannel? channel = (SocketTextChannel?)(chatChannel is SocketThreadChannel thread ? thread.ParentChannel : chatChannel);
+                SocketTextChannel? channel = (SocketTextChannel?)(_chatChannel is SocketThreadChannel thread ? thread.ParentChannel : _chatChannel);
 
                 SetupWebhooks(channel);
 
-                client.MessageReceived += DiscordMessageReceived;
+                _client.MessageReceived += DiscordMessageReceived;
 
-                commandHandler.RegisterAllCommands(channel!.Guild);
+                _commandHandler.RegisterAllCommands(channel!.Guild);
 
                 if (Config.InGameInviteCode == "auto") {
                     IInviteMetadata invite = channel.CreateInviteAsync(maxAge: null).Result;
                     Config.InGameInviteCode = invite.Code;
                     BotConfig.Write(Config);
-                    inviteUrl = invite.Url;
-                }
-                else {
-                    inviteUrl = $"https://discord.gg/{Config.InGameInviteCode}";
+                    _inviteUrl = invite.Url;
+                } else {
+                    _inviteUrl = $"https://discord.gg/{Config.InGameInviteCode}";
                 }
             }
 
             if (Config.ConsoleChannel != 0) {
-                consoleChannel = client.GetChannel(Config.ConsoleChannel) as SocketTextChannel;
-                consoleQueue = new MessageQueue(this);
+                _consoleChannel = _client.GetChannel(Config.ConsoleChannel) as SocketTextChannel;
+                _consoleQueue = new MessageQueue(this);
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Logger.Error(e);
         }
     }
@@ -145,16 +142,16 @@ public class Bot {
         foreach (IWebhook webhook in channel?.GetWebhooksAsync().Result ?? Enumerable.Empty<IWebhook>()) {
             switch (webhook.Name) {
                 case "vs1":
-                    webhooks[0] = new DiscordWebhookClient(webhook);
+                    _webhooks[0] = new DiscordWebhookClient(webhook);
                     break;
                 case "vs2":
-                    webhooks[1] = new DiscordWebhookClient(webhook);
+                    _webhooks[1] = new DiscordWebhookClient(webhook);
                     break;
             }
         }
 
-        webhooks[0] ??= new DiscordWebhookClient((channel as IIntegrationChannel)?.CreateWebhookAsync("vs1").Result);
-        webhooks[1] ??= new DiscordWebhookClient((channel as IIntegrationChannel)?.CreateWebhookAsync("vs2").Result);
+        _webhooks[0] ??= new DiscordWebhookClient((channel as IIntegrationChannel)?.CreateWebhookAsync("vs1").Result);
+        _webhooks[1] ??= new DiscordWebhookClient((channel as IIntegrationChannel)?.CreateWebhookAsync("vs2").Result);
     }
 
     private void OnRunGame() {
@@ -172,8 +169,8 @@ public class Bot {
             SendMessageToDiscordChat(text: format, wait: true);
         }
 
-        client?.StopAsync().Wait();
-        client?.LogoutAsync().Wait();
+        _client?.StopAsync().Wait();
+        _client?.LogoutAsync().Wait();
     }
 
     public void OnPlayerConnect(IServerPlayer player, string? joinmessage = null) {
@@ -248,7 +245,7 @@ public class Bot {
             case EnumLogType.Warning:
             case EnumLogType.Error:
             case EnumLogType.Fatal:
-                consoleQueue?.Enqueue(string.Format($"[{logType}] {message}", args));
+                _consoleQueue?.Enqueue(string.Format($"[{logType}] {message}", args));
                 break;
             case EnumLogType.Build:
             case EnumLogType.VerboseDebug:
@@ -261,19 +258,18 @@ public class Bot {
     }
 
     private Task DiscordMessageReceived(SocketMessage message) {
-        if (client?.ShouldIgnore(message) ?? true) {
+        if (_client?.ShouldIgnore(message) ?? true) {
             return Task.CompletedTask;
         }
 
-        if (chatChannel?.Id == message.Channel.Id) {
+        if (_chatChannel?.Id == message.Channel.Id) {
             string format = Config.Messages.PlayerChat;
             if (format.Length <= 0) {
                 return Task.CompletedTask;
             }
 
-            SendMessageToGameChat(format.Format(message.GetAuthor(), client.SanitizeMessage(message)));
-        }
-        else if (consoleChannel?.Id == message.Channel.Id) {
+            SendMessageToGameChat(format.Format(message.GetAuthor(), _client.SanitizeMessage(message)));
+        } else if (_consoleChannel?.Id == message.Channel.Id) {
             Api.Event.EnqueueMainThreadTask(() => {
                 ServerMain server = (ServerMain)Api.World;
                 server.ReceiveServerConsole($"/{message}");
@@ -307,15 +303,15 @@ public class Bot {
             return;
         }
 
-        if (lastAuthor != username) {
-            lastAuthor = username;
-            curWebhook = (curWebhook + 1) & 1;
+        if (_lastAuthor != username) {
+            _lastAuthor = username;
+            _curWebhook = (_curWebhook + 1) & 1;
         }
 
-        DiscordWebhookClient? webhook = webhooks[curWebhook];
+        DiscordWebhookClient? webhook = _webhooks[_curWebhook];
 
         if (webhook != null) {
-            var task = webhook.SendMessageAsync(
+            Task<ulong>? task = webhook.SendMessageAsync(
                 text: text,
                 embeds: embed.Length <= 0
                     ? null
@@ -326,18 +322,17 @@ public class Bot {
                             .WithThumbnailUrl(thumbnail)
                             .Build()
                     },
-                username: username ?? client?.CurrentUser.Username,
-                avatarUrl: avatar ?? client?.CurrentUser.GetAvatarUrl(),
+                username: username ?? _client?.CurrentUser.Username,
+                avatarUrl: avatar ?? _client?.CurrentUser.GetAvatarUrl(),
                 allowedMentions: AllowedMentions.None,
-                threadId: chatChannel is SocketThreadChannel thread ? thread.Id : null
+                threadId: _chatChannel is SocketThreadChannel thread ? thread.Id : null
             );
             if (wait) {
                 task?.Wait();
             }
-        }
-        else {
-            var task = chatChannel?.SendMessageAsync(
-                text: $"{username ?? client?.CurrentUser.Username}: {text}",
+        } else {
+            Task<RestUserMessage>? task = _chatChannel?.SendMessageAsync(
+                text: $"{username ?? _client?.CurrentUser.Username}: {text}",
                 embed: embed.Length <= 0
                     ? null
                     : new EmbedBuilder()
@@ -355,7 +350,7 @@ public class Bot {
 
     internal void SendMessageToDiscordConsole(string message) {
         if (message.Length > 0) {
-            consoleChannel?.SendMessageAsync(message, allowedMentions: AllowedMentions.None).Wait();
+            _consoleChannel?.SendMessageAsync(message, allowedMentions: AllowedMentions.None).Wait();
         }
     }
 
@@ -368,7 +363,7 @@ public class Bot {
     private void UpdatePresence() {
         string format = Config.Messages.BotPresence;
         if (format.Length > 0) {
-            client?.SetGameAsync(format.Format(Api.World.AllOnlinePlayers.Length, Api.Server.Config.MaxClients));
+            _client?.SetGameAsync(format.Format(Api.World.AllOnlinePlayers.Length, Api.Server.Config.MaxClients));
         }
     }
 
@@ -376,23 +371,23 @@ public class Bot {
         Api.Event.PlayerChat -= OnPlayerChat;
         Api.Server.Logger.EntryAdded -= OnLoggerEntryAdded;
 
-        if (client != null) {
-            client.Log -= ClientLogToConsole;
-            client.SlashCommandExecuted -= commandHandler.HandleSlashCommands;
+        if (_client != null) {
+            _client.Log -= ClientLogToConsole;
+            _client.SlashCommandExecuted -= _commandHandler.HandleSlashCommands;
 
-            client.Dispose();
-            client = null;
+            _client.Dispose();
+            _client = null;
         }
 
-        consoleQueue?.Dispose();
-        consoleQueue = null;
+        _consoleQueue?.Dispose();
+        _consoleQueue = null;
 
-        webhooks[0]?.Dispose();
-        webhooks[0] = null;
-        webhooks[1]?.Dispose();
-        webhooks[1] = null;
+        _webhooks[0]?.Dispose();
+        _webhooks[0] = null;
+        _webhooks[1]?.Dispose();
+        _webhooks[1] = null;
 
-        chatChannel = null;
-        consoleChannel = null;
+        _chatChannel = null;
+        _consoleChannel = null;
     }
 }

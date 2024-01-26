@@ -13,8 +13,7 @@ public class HexTypeConverter : IYamlTypeConverter {
     public object ReadYaml(IParser parser, Type type) {
         try {
             return new Color(uint.Parse(parser.Consume<Scalar>().Value[1..], NumberStyles.HexNumber));
-        }
-        catch (Exception) {
+        } catch (Exception) {
             return Color.Teal;
         }
     }

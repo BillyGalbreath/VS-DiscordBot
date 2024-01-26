@@ -5,17 +5,17 @@ using System.Threading;
 namespace DiscordBot.Util;
 
 public class MessageQueue {
-    private readonly ConcurrentQueue<string> queue = new();
-    private readonly Bot bot;
+    private readonly ConcurrentQueue<string> _queue = new();
+    private readonly Bot _bot;
 
     public MessageQueue(Bot bot) {
-        this.bot = bot;
+        _bot = bot;
 
         bot.Api.Event.RegisterGameTickListener(_ => Process(), 1000);
     }
 
     public void Enqueue(string line) {
-        queue.Enqueue(line);
+        _queue.Enqueue(line);
     }
 
     private void Process() {
@@ -24,12 +24,12 @@ public class MessageQueue {
                 string text = line;
                 while (text.Length > 0) {
                     if (text.Length > 2000) {
-                        bot.SendMessageToDiscordConsole(text[..2000]);
+                        _bot.SendMessageToDiscordConsole(text[..2000]);
                         text = text[2000..];
                         continue;
                     }
 
-                    bot.SendMessageToDiscordConsole(text);
+                    _bot.SendMessageToDiscordConsole(text);
                     break;
                 }
             }
@@ -39,7 +39,7 @@ public class MessageQueue {
     private IEnumerable<string> ProcessLine() {
         List<string> result = new();
         string message = "";
-        while (queue.TryDequeue(out string? line)) {
+        while (_queue.TryDequeue(out string? line)) {
             if (message.Length + line.Length + 1 > 2000) {
                 result.Add(message);
                 message = "";
@@ -56,6 +56,6 @@ public class MessageQueue {
     }
 
     public void Dispose() {
-        queue.Clear();
+        _queue.Clear();
     }
 }

@@ -6,7 +6,7 @@ namespace DiscordBot.Patches;
 
 public class SystemTemporalStabilityPatches {
     public static bool ScrapeTemporalStormBroadcast { get; private set; }
-    
+
     protected internal SystemTemporalStabilityPatches(Harmony harmony) {
         _ = new OnTempStormTickPatch(harmony);
     }

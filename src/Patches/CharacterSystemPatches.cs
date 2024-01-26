@@ -14,7 +14,7 @@ public class CharacterSystemPatches {
     }
 
     private class OnCharacterSelectionPatch {
-        private static readonly List<string> CHARACTER_SELECT_CACHE = new();
+        private static readonly List<string> CharacterSelectCache = new();
 
         public OnCharacterSelectionPatch(Harmony harmony) {
             harmony.Patch(typeof(CharacterSystem).GetMethod("onCharacterSelection", BindingFlags.Instance | BindingFlags.NonPublic),
@@ -29,12 +29,12 @@ public class CharacterSystemPatches {
             }
 
             if (p.DidSelect) {
-                CHARACTER_SELECT_CACHE.Add(fromPlayer.PlayerUID);
+                CharacterSelectCache.Add(fromPlayer.PlayerUID);
             }
         }
 
         public static void Postfix(IServerPlayer fromPlayer) {
-            if (CHARACTER_SELECT_CACHE.Remove(fromPlayer.PlayerUID)) {
+            if (CharacterSelectCache.Remove(fromPlayer.PlayerUID)) {
                 DiscordBotMod.Bot?.OnCharacterSelection(fromPlayer);
             }
         }
