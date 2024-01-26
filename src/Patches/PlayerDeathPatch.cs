@@ -14,7 +14,9 @@ public class PlayerDeathPatch {
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public static void GetDeathMessagePostfix(ConnectedClient? client, string __result) {
-        ServerPlayer player = client?.GetField<ServerPlayer>("Player")!;
-        DiscordBotMod.Bot?.OnPlayerDeath(player, __result);
+        ServerPlayer? player = client?.GetField<ServerPlayer>("Player");
+        if (player != null) {
+            DiscordBotMod.Bot?.OnPlayerDeath(player, __result);
+        }
     }
 }
