@@ -1,5 +1,4 @@
-﻿using System;
-using Vintagestory.API.Common;
+﻿using Vintagestory.API.Common;
 
 namespace DiscordBot.Hook;
 
@@ -8,8 +7,8 @@ public static class SilentSaveHook {
     private static long _lastCheck;
 
     private static ModSystem? CachedMod(ICoreAPI api) {
-        long now = Environment.TickCount;
-        if (now - _lastCheck < 1000) {
+        long now = api.World.ElapsedMilliseconds;
+        if (_lastCheck > 0 && now - _lastCheck < 5000) {
             return _mod;
         }
 
@@ -20,6 +19,7 @@ public static class SilentSaveHook {
     }
 
     public static bool SilentSaveInProgress(this ICoreAPI api) {
-        return (bool)(CachedMod(api)?.GetType().GetMethod("SaveInProgress")?.Invoke(_mod, null) ?? false);
+        ModSystem? cached = CachedMod(api);
+        return cached != null && ((SilentSave.SilentSaveMod)cached).SaveInProgress();
     }
 }
