@@ -8,7 +8,7 @@ public static class SilentSaveHook {
 
     private static ModSystem? CachedMod(ICoreAPI api) {
         long now = api.World.ElapsedMilliseconds;
-        if (_lastCheck > 0 && now - _lastCheck < 5000) {
+        if (now - _lastCheck < 5000) {
             return _mod;
         }
 
@@ -19,7 +19,6 @@ public static class SilentSaveHook {
     }
 
     public static bool SilentSaveInProgress(this ICoreAPI api) {
-        ModSystem? cached = CachedMod(api);
-        return cached != null && ((SilentSave.SilentSaveMod)cached).SaveInProgress();
+        return (bool)(CachedMod(api)?.GetType().GetMethod("SaveInProgress")?.Invoke(_mod, null) ?? false);
     }
 }

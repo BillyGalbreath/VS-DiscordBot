@@ -2,7 +2,6 @@
 
     <PropertyGroup>
         <TargetFramework>net7.0</TargetFramework>
-        <EmbedAllSources>true</EmbedAllSources>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -12,91 +11,48 @@
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
         <ExcludeGeneratedDebugSymbol>false</ExcludeGeneratedDebugSymbol>
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     </PropertyGroup>
 
     <ItemGroup>
-        <Reference Include="Vintagestory">
-            <HintPath>$(VINTAGE_STORY)/Vintagestory.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="VintagestoryAPI">
-            <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="VintagestoryLib">
-            <HintPath>$(VINTAGE_STORY)/VintagestoryLib.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="VintagestoryServer">
-            <HintPath>$(VINTAGE_STORY)/VintagestoryServer.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="VSCreative">
-            <HintPath>$(VINTAGE_STORY)/Mods/VSCreativeMod.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="VSEssentials">
-            <HintPath>$(VINTAGE_STORY)/Mods/VSEssentials.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="VSSurvivalMod">
-            <HintPath>$(VINTAGE_STORY)/Mods/VSSurvivalMod.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="Harmony">
-            <HintPath>$(VINTAGE_STORY)/Lib/0Harmony.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="Newtonsoft.Json">
-            <HintPath>$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="OpenTKGraphics">
-            <HintPath>$(VINTAGE_STORY)/Lib/OpenTK.Graphics.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="protobuf-net">
-            <HintPath>$(VINTAGE_STORY)/Lib/protobuf-net.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="SkiaSharp">
-            <HintPath>$(VINTAGE_STORY)/Lib/SkiaSharp.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Discord.Net" Version="3.12.0" />
-        <PackageReference Include="EmojiOne" Version="4.5.0" />
-        <PackageReference Include="YamlDotNet" Version="13.7.1" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\SilentSave\SilentSave.csproj">
-            <Private>false</Private>
-        </ProjectReference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="LICENSE" CopyToOutputDirectory="PreserveNewest" />
-        <None Include="resources/**" CopyToOutputDirectory="PreserveNewest">
+        <Reference Include="Vintagestory" HintPath="$(VINTAGE_STORY)/Vintagestory.dll" Private="false" />
+        <Reference Include="VintagestoryAPI" HintPath="$(VINTAGE_STORY)/VintagestoryAPI.dll" Private="false" />
+        <Reference Include="VintagestoryLib" HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll" Private="false" />
+        <Reference Include="VintagestoryServer" HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll" Private="false" />
+        <Reference Include="VSCreative" HintPath="$(VINTAGE_STORY)/Mods/VSCreativeMod.dll" Private="false" />
+        <Reference Include="VSEssentials" HintPath="$(VINTAGE_STORY)/Mods/VSEssentials.dll" Private="false" />
+        <Reference Include="VSSurvivalMod" HintPath="$(VINTAGE_STORY)/Mods/VSSurvivalMod.dll" Private="false" />
+        <Reference Include="Harmony" HintPath="$(VINTAGE_STORY)/Lib/0Harmony.dll" Private="false" />
+        <Reference Include="OpenTK.Graphics" HintPath="$(VINTAGE_STORY)/Lib/OpenTK.Graphics.dll" Private="false" />
+        <Reference Include="SkiaSharp" HintPath="$(VINTAGE_STORY)/Lib/SkiaSharp.dll" Private="false" />
+        <PackageReference Include="Discord.Net" Version="3.12.0" IncludeAssets="compile;runtime" />
+        <PackageReference Include="EmojiOne" Version="4.5.0" IncludeAssets="compile;runtime" />
+        <PackageReference Include="YamlDotNet" Version="13.7.1" IncludeAssets="compile;runtime" />
+        <None Include="LICENSE;resources/**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
             <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
         </None>
     </ItemGroup>
 
-    <Target Name="FilterCopyLocalItems" AfterTargets="ResolvePackageDependenciesForBuild">
+    <Target Name="RemoveDiscordNetTransitiveDependencies" AfterTargets="ResolvePackageDependenciesForBuild">
         <ItemGroup>
-            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions'" />
-            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'Newtonsoft.Json'" />
-            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'System.Interactive.Async'" />
-            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'System.Linq.Async'" />
-            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'System.Reactive'" />
+            <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="
+                '%(Filename)' == 'Microsoft.Extensions.DependencyInjection.Abstractions' OR
+                '%(Filename)' == 'Newtonsoft.Json' OR
+                '%(Filename)' == 'System.Interactive.Async' OR
+                '%(Filename)' == 'System.Linq.Async' OR
+                '%(Filename)' == 'System.Reactive'
+            " />
         </ItemGroup>
     </Target>
 
-    <Target Name="Package" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release'">
-        <MakeDir Directories="bin/Mods" />
-        <ZipDirectory DestinationFile="bin/Mods/$(TargetName).zip" SourceDirectory="$(TargetDir)" Overwrite="true" />
+    <Target Name="PreBuildStuffs" BeforeTargets="PreBuildEvent">
+        <RemoveDir Directories="bin/Release" />
+        <CallTarget Targets="Clean" />
+    </Target>
+
+    <Target Name="PostBuildStuffs" AfterTargets="PostBuildEvent">
+        <MakeDir Directories="bin/mods" />
+        <ZipDirectory DestinationFile="bin/mods/$(TargetName).zip" SourceDirectory="$(TargetDir)" Overwrite="true" />
     </Target>
 
 </Project>
