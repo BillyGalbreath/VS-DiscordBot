@@ -20,10 +20,10 @@ public class ClientMod {
 
     private readonly ICoreClientAPI _capi;
     private readonly ClientPlatformAbstract _platform;
-    
+
     private GuiDialogCreateCharacter? _dialog;
     private bool _findNextSkin;
-    private bool _takeScreenshot;
+    private string? _takeScreenshot;
 
     private SKBitmap? _bitmap, _rotated, _cropped;
 
@@ -39,8 +39,8 @@ public class ClientMod {
             .GetValue((ClientMain)_capi.World)!;
 
         eventManager.RegisterRenderer(_ => {
-            if (_takeScreenshot) {
-                Screenshot();
+            if (_takeScreenshot != null) {
+                Screenshot(_takeScreenshot);
             }
         }, EnumRenderStage.Done, "uh...", 2.0);
     }
@@ -53,7 +53,14 @@ public class ClientMod {
         }
 
         ThreadPool.QueueUserWorkItem(_ => {
-            Mustache(_capi.World.Player.Entity.GetBehavior<EntityBehaviorExtraSkinnable>());
+            EntityBehaviorExtraSkinnable ebes = _capi.World.Player.Entity.GetBehavior<EntityBehaviorExtraSkinnable>();
+            BaseSkin(ebes);
+            EyeColor(ebes);
+            HairBase(ebes);
+            HairExtra(ebes);
+            Expression(ebes);
+            Mustache(ebes);
+            Beard(ebes);
             _capi.Event.EnqueueMainThreadTask(() => { _dialog?.TryClose(); }, "try close");
         });
     }
@@ -64,81 +71,87 @@ public class ClientMod {
             Parts.Clear();
             Parts.Add(baseskin, variant);
             //EyeColor(ebes);
-            End(ebes);
+            End(ebes, baseskin);
         }
     }
 
     private void EyeColor(EntityBehaviorExtraSkinnable ebes) {
         SkinnablePart eyecolor = ebes.AvailableSkinPartsByCode.Get("eyecolor")!;
         foreach (SkinnablePartVariant? variant in eyecolor.Variants) {
-            Parts.Remove(eyecolor);
+            Parts.Clear();
             Parts.Add(eyecolor, variant);
             //HairBase(ebes);
-            End(ebes);
+            End(ebes, eyecolor);
         }
     }
 
     private void HairBase(EntityBehaviorExtraSkinnable ebes) {
         SkinnablePart hairbase = ebes.AvailableSkinPartsByCode.Get("hairbase")!;
         foreach (SkinnablePartVariant? variant in hairbase.Variants) {
-            Parts.Remove(hairbase);
+            Parts.Clear();
             Parts.Add(hairbase, variant);
             //HairExtra(ebes);
-            HairColor(ebes);
+            HairColor(ebes, hairbase);
         }
     }
 
     private void HairExtra(EntityBehaviorExtraSkinnable ebes) {
+        SkinnablePart hairbase = ebes.AvailableSkinPartsByCode.Get("hairbase")!;
         SkinnablePart hairextra = ebes.AvailableSkinPartsByCode.Get("hairextra")!;
         foreach (SkinnablePartVariant? variant in hairextra.Variants) {
-            Parts.Remove(hairextra);
+            Parts.Clear();
+            Parts.Add(hairbase, hairbase.Variants[0]);
             Parts.Add(hairextra, variant);
             //Expression(ebes);
-            HairColor(ebes);
+            HairColor(ebes, hairextra);
         }
     }
 
     private void Expression(EntityBehaviorExtraSkinnable ebes) {
+        SkinnablePart hairextra = ebes.AvailableSkinPartsByCode.Get("hairextra")!;
         SkinnablePart expression = ebes.AvailableSkinPartsByCode.Get("facialexpression")!;
         foreach (SkinnablePartVariant? variant in expression.Variants) {
-            Parts.Remove(expression);
+            Parts.Clear();
+            Parts.Add(hairextra, hairextra.Variants[0]);
             Parts.Add(expression, variant);
             //Mustache(ebes);
-            End(ebes);
+            End(ebes, expression);
         }
     }
 
     private void Mustache(EntityBehaviorExtraSkinnable ebes) {
         SkinnablePart mustache = ebes.AvailableSkinPartsByCode.Get("mustache")!;
         foreach (SkinnablePartVariant? variant in mustache.Variants) {
-            Parts.Remove(mustache);
+            Parts.Clear();
             Parts.Add(mustache, variant);
             //Beard(ebes);
-            HairColor(ebes);
+            HairColor(ebes, mustache);
         }
     }
 
     private void Beard(EntityBehaviorExtraSkinnable ebes) {
+        SkinnablePart mustache = ebes.AvailableSkinPartsByCode.Get("mustache")!;
         SkinnablePart beard = ebes.AvailableSkinPartsByCode.Get("beard")!;
         foreach (SkinnablePartVariant? variant in beard.Variants) {
-            Parts.Remove(beard);
+            Parts.Clear();
+            Parts.Add(mustache, mustache.Variants[0]);
             Parts.Add(beard, variant);
-            HairColor(ebes);
+            HairColor(ebes, beard);
         }
     }
 
-    private void HairColor(EntityBehaviorExtraSkinnable ebes) {
+    private void HairColor(EntityBehaviorExtraSkinnable ebes, SkinnablePart type) {
         SkinnablePart haircolor = ebes.AvailableSkinPartsByCode.Get("haircolor")!;
         foreach (SkinnablePartVariant? variant in haircolor.Variants) {
             Parts.Remove(haircolor);
             Parts.Add(haircolor, variant);
 
-            End(ebes);
+            End(ebes, type);
         }
     }
 
-    private void End(EntityBehaviorExtraSkinnable ebes) {
-        _capi.Event.EnqueueMainThreadTask(() => { FinalResult(ebes); }, "final result");
+    private void End(EntityBehaviorExtraSkinnable ebes, SkinnablePart type) {
+        _capi.Event.EnqueueMainThreadTask(() => { FinalResult(ebes, type); }, "final result");
 
         _findNextSkin = false;
         while (!_findNextSkin) {
@@ -156,7 +169,7 @@ public class ClientMod {
         }
     }
 
-    private void FinalResult(EntityBehaviorExtraSkinnable ebes) {
+    private void FinalResult(EntityBehaviorExtraSkinnable ebes, SkinnablePart type) {
         EntitySkinnableShapeRenderer essr = (_capi.World.Player.Entity.Properties.Client.Renderer as EntitySkinnableShapeRenderer)!;
         essr.doReloadShapeAndSkin = false;
         foreach (KeyValuePair<SkinnablePart, SkinnablePartVariant> entry in Parts) {
@@ -166,11 +179,11 @@ public class ClientMod {
         essr.doReloadShapeAndSkin = true;
         essr.TesselateShape();
 
-        _capi.Event.RegisterCallback(_ => _takeScreenshot = true, 1);
+        _capi.Event.RegisterCallback(_ => _takeScreenshot = type.Code, 1);
     }
 
-    private void Screenshot() {
-        _takeScreenshot = false;
+    private void Screenshot(string type) {
+        _takeScreenshot = null;
 
         _platform.LoadFrameBuffer(EnumFrameBuffer.Default);
 
@@ -191,7 +204,7 @@ public class ClientMod {
         //scaled = new SKBitmap(64, 64);
         //cropped.ScalePixels(scaled, SKFilterQuality.High);
 
-        string path = Path.Combine(GamePaths.Screenshots, "mustache");
+        string path = Path.Combine(GamePaths.Screenshots, type);
         SkinnablePartVariant[] arr = Parts.Values.ToArray();
         for (int i = 0; i < arr.Length - 1; i++) {
             path = Path.Combine(path, arr[i].Code);
