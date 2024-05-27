@@ -178,7 +178,7 @@ public class Bot {
 
         string format = Config.Messages.PlayerJoined;
         if (format is { Length: > 0 } && joinmessage is { Length: > 0 }) {
-            SendMessageToDiscordChat(0x00FF00, embed: format.Format(joinmessage, player.GetClass(), player.PlayerName), thumbnail: player.GetAvatar());
+            SendMessageToDiscordChat(0x00FF00, embed: format.Format(joinmessage, player.Entity.GetCharacterClass(), player.PlayerName), thumbnail: player.Entity.GetAvatar());
         }
     }
 
@@ -215,13 +215,13 @@ public class Bot {
             data = $"from: {player.Entity.EntityId},withoutPrefix:{toGame}";
         }
 
-        SendMessageToDiscordChat(text: toDiscord, username: player.PlayerName, avatar: player.GetAvatar());
+        SendMessageToDiscordChat(text: toDiscord, username: player.PlayerName, avatar: player.Entity.GetAvatar());
     }
 
     public void OnCharacterSelection(IServerPlayer player) {
         string format = Config.Messages.PlayerChangedCharacter;
         if (format is { Length: > 0 }) {
-            SendMessageToDiscordChat(0xFFFF00, embed: format.Format(player.PlayerName, player.GetClass()), thumbnail: player.GetAvatar());
+            SendMessageToDiscordChat(0xFFFF00, embed: format.Format(player.PlayerName, player.Entity.GetCharacterClass()), thumbnail: player.Entity.GetAvatar());
         }
     }
 

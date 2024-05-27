@@ -1,16 +1,16 @@
-﻿using Vintagestory.API.Config;
+﻿using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
-using Vintagestory.API.Server;
 
 namespace DiscordBot.Extensions;
 
 public static class PlayerExtensions {
-    public static string GetClass(this IServerPlayer player) {
-        return Lang.Get($"characterclass-{player.Entity.WatchedAttributes.GetString("characterClass")}");
+    public static string GetCharacterClass(this EntityPlayer player) {
+        return Lang.Get($"characterclass-{player.WatchedAttributes.GetString("characterClass")}");
     }
 
-    public static string GetAvatar(this IServerPlayer player) {
-        ITreeAttribute appliedParts = (ITreeAttribute)player.Entity.WatchedAttributes.GetTreeAttribute("skinConfig")["appliedParts"];
+    public static string GetAvatar(this EntityPlayer player) {
+        ITreeAttribute appliedParts = (ITreeAttribute)player.WatchedAttributes.GetTreeAttribute("skinConfig")["appliedParts"];
         return $"https://vs.pl3x.net/v1/" +
                $"{appliedParts.GetString("baseskin")}/" +
                $"{appliedParts.GetString("eyecolor")}/" +
