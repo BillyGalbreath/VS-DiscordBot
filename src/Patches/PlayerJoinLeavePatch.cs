@@ -25,7 +25,8 @@ public class PlayerJoinLeavePatch {
         }
 
         ConnectedPlayerUuids.Add(player.PlayerUID);
-        DiscordBotMod.Bot?.OnPlayerConnect(player, Lang.Get("{0} joined. Say hi :)", player.PlayerName));
+        string message = client!.IsNewEntityPlayer ? "{0} joined for the first time! Say hi :)" : "{0} joined. Say hi :)";
+        DiscordBotMod.Bot?.OnPlayerConnect(player, Lang.Get(message, player.PlayerName));
     }
 
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
