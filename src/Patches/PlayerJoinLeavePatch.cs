@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using DiscordBot.Extensions;
 using HarmonyLib;
 using Vintagestory.API.Config;
+using Vintagestory.API.Util;
 using Vintagestory.Server;
 
 namespace DiscordBot.Patches;
@@ -25,7 +26,8 @@ public class PlayerJoinLeavePatch {
         }
 
         ConnectedPlayerUuids.Add(player.PlayerUID);
-        string message = client!.IsNewEntityPlayer ? "{0} joined for the first time! Say hi :)" : "{0} joined. Say hi :)";
+        bool firstJoin = !SerializerUtil.Deserialize(client!.WorldData.GetModdata("createCharacter"), false);
+        string message = firstJoin ? "{0} joined for the first time! Say hi :)" : "{0} joined. Say hi :)";
         DiscordBotMod.Bot?.OnPlayerConnect(player, Lang.Get(message, player.PlayerName));
     }
 
