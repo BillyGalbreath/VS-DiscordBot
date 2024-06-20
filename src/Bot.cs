@@ -282,16 +282,24 @@ public class Bot {
     private Task ClientLogToConsole(LogMessage msg) {
         switch (msg.Severity) {
             case LogSeverity.Critical or LogSeverity.Error:
-                Logger.Error(msg.Message ?? msg.Exception.Message);
+                if (Config.BotLogLevel >= 1) {
+                    Logger.Error(msg.Message ?? msg.Exception.Message);
+                }
                 break;
             case LogSeverity.Warning:
-                Logger.Warning(msg.Message ?? msg.Exception.Message);
+                if (Config.BotLogLevel >= 2) {
+                    Logger.Warning(msg.Message ?? msg.Exception.Message);
+                }
                 break;
             case LogSeverity.Info:
-                Logger.Event(msg.Message ?? msg.Exception.Message);
+                if (Config.BotLogLevel >= 3) {
+                    Logger.Event(msg.Message ?? msg.Exception.Message);
+                }
                 break;
             case LogSeverity.Verbose or LogSeverity.Debug:
-                /* do nothing */
+                if (Config.BotLogLevel >= 4) {
+                       Logger.Event(msg.Message ?? msg.Exception.Message); 
+                }
                 break;
         }
 

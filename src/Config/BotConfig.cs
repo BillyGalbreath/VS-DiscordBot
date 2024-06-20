@@ -23,16 +23,19 @@ public class BotConfig {
     [YamlMember(Order = 2, Description = "Channel ID where you want console to log to.\n!!! WARNING !!!\nProtect this channel, as any messages sent to it\nwill be run as commands directly in the console!\nLeave as 0 if you dont want this feature enabled.")]
     public ulong ConsoleChannel { get; private set; }
 
-    [YamlMember(Order = 3, Description = "Parse urls in the game chat (anchor tags and markdown links become clickable)")]
+    [YamlMember(Order = 3, Description = "Log level for discord messages (this is NOT the server's log level!)\n0 = No log\n1 = Error logs\n2 = Warning logs\n3 = Info logs\n4 = All logs")]
+    public int BotLogLevel { get; private set; } = 2;
+
+    [YamlMember(Order = 4, Description = "Parse urls in the game chat (anchor tags and markdown links become clickable)")]
     public bool ParseUrlsInGameChat { get; private set; } = true;
 
-    [YamlMember(Order = 4, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The invite code for the /discord command.\nSet it to\"auto\" for the bot to create a new invite.")]
+    [YamlMember(Order = 5, ScalarStyle = ScalarStyle.DoubleQuoted, Description = "The invite code for the /discord command.\nSet it to\"auto\" for the bot to create a new invite.")]
     public string InGameInviteCode { get; internal set; } = "auto";
 
-    [YamlMember(Order = 5, Description = "\nCustomizable messages.")]
+    [YamlMember(Order = 6, Description = "\nCustomizable messages.")]
     public ConfigMessages Messages = new();
 
-    [YamlMember(Order = 6, Description = "\nDiscord slash command options.")]
+    [YamlMember(Order = 7, Description = "\nDiscord slash command options.")]
     public ConfigCommands Commands = new();
 
     [YamlMember(Order = int.MaxValue, Description = "\n\nDo not edit this. For internal use only.\n\n(seriously, you can break your bot by editing this)")]
