@@ -11,7 +11,7 @@ public static class PlayerExtensions {
 
     public static string GetAvatar(this EntityPlayer player) {
         ITreeAttribute appliedParts = (ITreeAttribute)player.WatchedAttributes.GetTreeAttribute("skinConfig")["appliedParts"];
-        return $"https://vs.pl3x.net/v1/" +
+        return $"https://vs.pl3x.net/v2/" +
                $"{appliedParts.GetString("baseskin")}/" +
                $"{appliedParts.GetString("eyecolor")}/" +
                $"{appliedParts.GetString("hairbase")}/" +
