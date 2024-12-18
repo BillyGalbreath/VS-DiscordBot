@@ -285,21 +285,25 @@ public class Bot {
                 if (Config.BotLogLevel >= 1) {
                     Logger.Error(msg.Message ?? msg.Exception.Message);
                 }
+
                 break;
             case LogSeverity.Warning:
                 if (Config.BotLogLevel >= 2) {
                     Logger.Warning(msg.Message ?? msg.Exception.Message);
                 }
+
                 break;
             case LogSeverity.Info:
                 if (Config.BotLogLevel >= 3) {
                     Logger.Event(msg.Message ?? msg.Exception.Message);
                 }
+
                 break;
             case LogSeverity.Verbose or LogSeverity.Debug:
                 if (Config.BotLogLevel >= 4) {
-                       Logger.Event(msg.Message ?? msg.Exception.Message); 
+                    Logger.Event(msg.Message ?? msg.Exception.Message);
                 }
+
                 break;
         }
 
